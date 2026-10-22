@@ -27,3 +27,9 @@
 ## 说明
 
 如发现遗漏或版权问题，请提交 Issue 联系维护者。
+## Ulanzi 官方开源仓库（上游）
+
+- 仓库：<https://github.com/UlanziTechnology/Ulanzi-U-Clock-TC002>
+- 许可：GPL-3.0-or-later
+- 本项目的 `PageBase`、`KeyManager`、`McuManager`、`TomThumb` 等部分文件复制/改写自该官方仓库；保留官方版权声明，本项目整体继续以 GPL-3.0-or-later 发布。
+- 官方仓库只包含源码/示例/协议文档，不包含官方 stock `/res` 固件资源；本公开仓库因此不包含 `update.img`。
