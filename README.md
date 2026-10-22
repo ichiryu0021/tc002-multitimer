@@ -399,7 +399,7 @@ tree.json                   # 官方仓库文件树
 ## 许可
 
 本项目主体代码按 **GNU General Public License v3.0 or later（GPL-3.0-or-later）**
-发布，许可证全文见 [`LICENSE`](LICENSE)。本工程基于 Ulanzi 官方 TC002 SDK/示例开发，
+发布，许可证全文见 [`LICENSE`](LICENSE)。本工程基于 Ulanzi 官方开源仓库 [`UlanziTechnology/Ulanzi-U-Clock-TC002`](https://github.com/UlanziTechnology/Ulanzi-U-Clock-TC002)（GPL-3.0-or-later）开发，
 并复制/改写了官方示例中的 `PageBase`、`KeyManager`、`McuManager`、`TomThumb` 等文件；
 官方版权声明应随衍生作品保留。
 
