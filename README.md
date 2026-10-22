@@ -36,7 +36,7 @@ v2 提供“正常时钟 + 带日期多目标倒计时”，v2.1 补齐多 WiFi 
 > 主机单测 **211/211**、网页自检 **90/90**、交叉编译 **0 errors / 0 warnings**
 > （最终源码 `build/v3g-workspace/.../libzkgui.so`，722,532 字节 /
 > `1A495991...`）。
-> `dist/update.img`（21:49:28 生成，1,942,076 字节 / `8B2BCF20...`）已通过官方 ADB
+> 本地开发记录：`dist/update.img`（21:49:28 生成，1,942,076 字节 / `8B2BCF20...`）已通过官方 ADB
 > 流程固化到设备 `/res`：`/tmp` 为空、`/data` 配置保留、回读
 > `/res/lib/libzkgui.so` = 722,532 字节 / `1A495991...`。
 > 真机已验证：**NO COUNTDOWN**（无目标 p1 `text2` / p2 `text`）、**datetime 页**
@@ -71,7 +71,7 @@ v2 提供“正常时钟 + 带日期多目标倒计时”，v2.1 补齐多 WiFi 
 - **构建脚本**：[`tools/build.ps1`](tools/build.ps1)（Windows headless 构建）
 - **镜像与烧写脚本**：[`tools/make-image.ps1`](tools/make-image.ps1)、
   [`tools/flash-update.ps1`](tools/flash-update.ps1)
-- **发布包 / 固化镜像**：[`dist/`](dist/)（当前 **v3.3**，已固化；含 `libzkgui.so`、`update.img`、校验文件）
+- **发布包 / 组件**：[`dist/`](dist/)（公开仓库只含 `libzkgui.so`、`EasyUI.cfg`、`ui/main.ftu`；`update.img` 需本地生成）
 - **开发交接**：[`docs/HANDOFF-native.md`](docs/HANDOFF-native.md)
 - **主机单测**：[`tests/`](tests/)（211/211）
 - **直播中继**：[`tools/live-bridge/`](tools/live-bridge/)（Python）
@@ -283,13 +283,13 @@ cd tools\live-bridge; python -m unittest -v test_bridge; cd ..\..
 bridge 单测 **40/40**。
 最终源码构建产物 `build/v3g-workspace/MultiTimer/Release/libzkgui.so` 为
 **722,532 字节**，SHA256 `1A4959919B126AC35CE673BF14799A83CFE767063CA61A17896E882E07B8086E`。
-`dist/` 镜像由 `make-image.ps1` 生成（叠加 `res-extra` 的 2 个 OpenSSL 库），
+`dist/update.img` 由 `make-image.ps1` 在本地生成（叠加 `res-extra` 的 2 个 OpenSSL 库），
 字节数/hash 见 `dist/build-info.txt` 与下节。v3.0 构建（718,436 / `A4B1D7E8...`）
 为历史。详细参数、网页资源生成步骤与编译说明见原生工程 README。
 
 ## 固化与备份
 
-- 当前 `dist/` 是 **v3.3**（2026-10-22 21:49:28 生成并固化）：
+- 本地开发时 `dist/` 曾生成 v3.3 update.img（2026-10-22 21:49:28，已真机固化）；公开仓库不包含该镜像：
   - `libzkgui.so` 722,532 字节，SHA256
     `1A4959919B126AC35CE673BF14799A83CFE767063CA61A17896E882E07B8086E`；
   - `update.img` 1,942,076 字节，SHA256
@@ -382,7 +382,7 @@ tools/flash-update.ps1      # 官方 ADB 固化（默认 DryRun，-Confirm 才�
 tools/deploy-tmp.ps1        # /tmp 临时部署（开发调试）
 tools/platform-tools/       # adb 等调试工具
 tests/                      # 主机单测（211 个用例）与网页自检
-dist/                       # libzkgui.so、update.img、EasyUI.cfg、校验文件
+dist/                       # libzkgui.so、EasyUI.cfg、ui/main.ftu（update.img 不入库）
 legacy/                     # 旧 AWTRIX/Python 方案存档，不再维护
 LICENSE                     # GPL-3.0 许可证全文
 THIRD_PARTY_NOTICES.md      # 第三方组件与字体许可声明
