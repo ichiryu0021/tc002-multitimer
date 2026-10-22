@@ -33,3 +33,12 @@
 - 许可：GPL-3.0-or-later
 - 本项目的 `PageBase`、`KeyManager`、`McuManager`、`TomThumb` 等部分文件复制/改写自该官方仓库；保留官方版权声明，本项目整体继续以 GPL-3.0-or-later 发布。
 - 官方仓库只包含源码/示例/协议文档，不包含官方 stock `/res` 固件资源；本公开仓库因此不包含 `update.img`。
+## Public CA bundle（最小镜像 `/res/ui/cacert.pem`）
+
+- 来源：<https://curl.se/ca/cacert.pem>
+- 许可：Mozilla Public License 2.0（完整文本见 `native/MultiTimer/third_party/ca-bundle/LICENSE-MPL-2.0.txt`）
+- 用途：Bilibili HTTPS 证书链/主机名校验；非 Ulanzi 专有内容。
+
+## FlyThings SDK / 运行库
+
+本项目源码通过 FlyThings IDE 依赖包与官方 TC002 Demo 构建；完整镜像不包含 SDK 安装包。设备系统 `/lib` 中的 `libeasyui`、`libzkhardware`、`libzknet` 等运行库由用户设备的官方固件提供。FlyThings 依赖包许可以官方说明为准；官方 TC002 仓库的 `THIRD_PARTY_NOTICES.md` 列出了 BlueZ / Adafruit GFX / FlyThings 组件的许可。

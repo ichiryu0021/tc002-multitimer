@@ -1,10 +1,18 @@
 # Ulanzi TC002 MultiTimer v3.3 — 可翻页页面系统 + 正计时/日期页 + 直播监控
 
-> **公开仓库说明**：本仓库开源固件应用源码、构建脚本、测试和预编译 `libzkgui.so`；
-> **不包含 Ulanzi 官方 stock `/res` 基线，也不包含可直接刷机的 `update.img`**（其中含厂商素材/二进制，不随本仓库分发）。
-> 构建/刷机请自备官方固件并抽取 stock `/res`，见 `docs/FLASH-RUNBOOK.md`。许可证 GPL-3.0；第三方组件见 `THIRD_PARTY_NOTICES.md`。
+> **公开仓库说明**：本仓库开源固件应用源码、构建脚本、测试、预编译 `libzkgui.so`，以及**最小 /res 刷机镜像 `dist-minimal/update.img`**（只含本项目文件、公共 CA、OpenSSL；不含官方 stock /res 的厂商素材）。
+> 含官方 stock `/res` 的完整镜像不随仓库分发；如需完整镜像，请在本地用官方固件抽取 stock 基线后运行 `tools/make-image.ps1`，见 `docs/FLASH-RUNBOOK.md`。许可证 GPL-3.0；第三方组件见 `THIRD_PARTY_NOTICES.md`。
 
 > 旧的 AWTRIX NG / Berry / Python 方案未包含在公开仓库中；本仓库只维护基于 Ulanzi 官方 SDK 的 FlyThings 原生方案。
+
+## 公开 Release：最小可刷镜像
+
+- 文件：`dist-minimal/update.img`（1,491,516 B，SHA256 `B079F8DA0A3443D4B8E21D0B5D2BA51284F1537400630260ECF8CEA9E012F4F2`）
+- 内容只有 6 个文件：`lib/libzkgui.so`（本项目 GPL 应用）、`lib/libssl.so.1.1`、`lib/libcrypto.so.1.1`、`ui/main.ftu`（官方 GPL Demo 资源）、`ui/cacert.pem`（公共 CA，MPL-2.0）、`etc/EasyUI.cfg`（本项目配置）
+- **不含** Ulanzi stock `/res` 的字体、图标、音频、BlueZ、官方 Web/测试 UI 等素材；因此可以随 GPL 源码一起分发。
+- 设备系统 `/lib` 仍需官方固件提供的 `libeasyui` / `libzkhardware` / `libzknet` 等运行库；本镜像只替换 `/res`。
+- 构建：`tools/make-minimal-image.ps1`；校验信息见 `dist-minimal/build-info-minimal.txt`。
+- 刷机仍用官方 ADB 流程（`tools/flash-update.ps1 -Confirm`）；**刷前自行确认能恢复官方固件**。
 
 本项目是 Ulanzi TC002（52×16 RGB 像素时钟，Z21 平台）的**原生 C++ 固件应用**。
 v2 提供“正常时钟 + 带日期多目标倒计时”，v2.1 补齐多 WiFi / SoftAP / 每分钟 NTP /
@@ -71,7 +79,8 @@ v2 提供“正常时钟 + 带日期多目标倒计时”，v2.1 补齐多 WiFi 
 - **构建脚本**：[`tools/build.ps1`](tools/build.ps1)（Windows headless 构建）
 - **镜像与烧写脚本**：[`tools/make-image.ps1`](tools/make-image.ps1)、
   [`tools/flash-update.ps1`](tools/flash-update.ps1)
-- **发布包 / 组件**：[`dist/`](dist/)（公开仓库只含 `libzkgui.so`、`EasyUI.cfg`、`ui/main.ftu`；`update.img` 需本地生成）
+- **发布包 / 组件**：[`dist/`](dist/)（只含 `libzkgui.so`、`EasyUI.cfg`、`ui/main.ftu`；含官方 stock 的 `update.img` 需本地生成）
+- **最小可刷镜像**：[`dist-minimal/update.img`](dist-minimal/update.img)（无官方 stock 素材，GPL/公共 CA/OpenSSL）
 - **开发交接**：[`docs/HANDOFF-native.md`](docs/HANDOFF-native.md)
 - **主机单测**：[`tests/`](tests/)（211/211）
 - **直播中继**：[`tools/live-bridge/`](tools/live-bridge/)（Python）
@@ -382,7 +391,8 @@ tools/flash-update.ps1      # 官方 ADB 固化（默认 DryRun，-Confirm 才�
 tools/deploy-tmp.ps1        # /tmp 临时部署（开发调试）
 tools/platform-tools/       # adb 等调试工具
 tests/                      # 主机单测（211 个用例）与网页自检
-dist/                       # libzkgui.so、EasyUI.cfg、ui/main.ftu（update.img 不入库）
+dist/                       # libzkgui.so、EasyUI.cfg、ui/main.ftu（完整 update.img 不入库）
+dist-minimal/               # 最小 /res 镜像（不含官方 stock，可随仓库分发）
 legacy/                     # 旧 AWTRIX/Python 方案存档，不再维护
 LICENSE                     # GPL-3.0 许可证全文
 THIRD_PARTY_NOTICES.md      # 第三方组件与字体许可声明

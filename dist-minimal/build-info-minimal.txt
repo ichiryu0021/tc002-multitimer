@@ -1,0 +1,16 @@
+TC002 / Z21 minimal /res update image
+generated_local=2026-10-22T22:43:01.5730691+08:00
+platform=0x000606
+partition=res (mtd3, 8 MiB)
+source_res=D:\Project\ulanzi\native\MultiTimer\res-minimal
+source_so=D:\Project\ulanzi\build\v3g-workspace\MultiTimer\Release\libzkgui.so
+source_so_bytes=722532
+source_so_sha256=1A4959919B126AC35CE673BF14799A83CFE767063CA61A17896E882E07B8086E
+res_tmp=D:\Project\ulanzi\build\flash\minimal-work\res.tmp
+res_tmp_bytes=1490944
+res_tmp_sha256=5B8E32957974991849363C60E3039C3C5E7387759F64E3844E64D14EA04E2C91
+update_img=D:\Project\ulanzi\build\minimal-image\update.img
+update_img_bytes=1491516
+update_img_sha256=B079F8DA0A3443D4B8E21D0B5D2BA51284F1537400630260ECF8CEA9E012F4F2
+included=libzkgui.so, libssl.so.1.1, libcrypto.so.1.1, ui/main.ftu, ui/cacert.pem(public CA), etc/EasyUI.cfg
+excluded=Ulanzi stock /res assets (fonts/icons/audio/BlueZ/web/test UI)
