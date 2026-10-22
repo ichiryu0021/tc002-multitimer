@@ -1,0 +1,4937 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#0b0d12">
+<meta name="color-scheme" content="dark">
+<title>Ulanzi TC002 多计时器 v3</title>
+<style>
+  /* ==========================================================================
+     基础：深色、移动优先、零外链（系统字体，无 CDN / 无 webfont）
+     ========================================================================== */
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  html, body { margin: 0; padding: 0; }
+  body {
+    background: #0b0d12;
+    color: #e6e9f0;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC",
+                 "Hiragino Sans GB", "Microsoft YaHei", sans-serif;
+    font-size: 15px;
+    line-height: 1.45;
+    padding-bottom: calc(22px + env(safe-area-inset-bottom));
+  }
+  main { max-width: 480px; margin: 0 auto; padding: 14px 12px 0; }
+  h1 { font-size: 17px; font-weight: 700; margin: 4px 2px 12px; color: #f2f4f9; }
+  h1 small { display: block; font-size: 12px; font-weight: 400; color: #8b93a7; margin-top: 3px; }
+
+  .card {
+    background: #151821;
+    border: 1px solid #232838;
+    border-radius: 14px;
+    padding: 14px;
+    margin-bottom: 12px;
+    min-width: 0;
+  }
+  .card-title { font-size: 14px; font-weight: 600; color: #b9c0d2; margin: 0 0 10px; }
+
+  label.field { display: block; font-size: 12px; color: #8b93a7; margin: 0 0 6px; }
+
+  input[type="text"], input[type="time"], input[type="date"], input[type="number"],
+  input[type="password"], select {
+    width: 100%;
+    min-width: 0;
+    background: #0e1118;
+    border: 1px solid #2c3245;
+    border-radius: 9px;
+    color: #e6e9f0;
+    font-family: inherit;
+    font-size: 16px; /* >=16px 防止 iOS 聚焦自动放大 */
+    padding: 10px 10px;
+    min-height: 44px;
+    outline: none;
+  }
+  input:focus, select:focus { border-color: #4da3ff; }
+  input.invalid-t, select.invalid-t { border-color: #c0463f; background: #1b1012; }
+  input[type="number"] { width: 100%; }
+  input[type="color"] {
+    width: 46px; height: 40px; padding: 2px; flex: none;
+    background: #0e1118; border: 1px solid #2c3245; border-radius: 9px;
+  }
+
+  button {
+    appearance: none;
+    border: 1px solid #2c3245;
+    background: #1d2230;
+    color: #e6e9f0;
+    font-family: inherit;
+    border-radius: 10px;
+    font-size: 15px;
+    padding: 11px 14px;
+    min-height: 44px;
+    cursor: pointer;
+    min-width: 0;
+  }
+  button:active:not(:disabled) { background: #262c3d; }
+  button:disabled { opacity: .45; cursor: not-allowed; }
+  button.primary { background: #2b6cb0; border-color: #2b6cb0; color: #fff; }
+  button.danger { border-color: #7a3535; color: #ff8a8a; }
+  button.block { width: 100%; margin-top: 8px; }
+
+  .row { display: flex; gap: 8px; align-items: center; min-width: 0; }
+  .row.wrap { flex-wrap: wrap; }
+  .grow { flex: 1; min-width: 0; }
+  .hint { font-size: 11px; color: #717a90; margin: 7px 0 0; overflow-wrap: anywhere; }
+  .hint.warn { color: #ff9a9a; }
+  .err-text { font-size: 11px; color: #ff8a8a; margin: 4px 0 0; min-height: 0; overflow-wrap: anywhere; }
+  .net-field { margin-top: 12px; }
+  .base-actions { margin-top: 8px; }
+  .base-actions button { flex: 1; }
+  .base-select { margin-bottom: 8px; }
+
+  .banner {
+    border: 1px solid #7a3535;
+    background: #22100f;
+    color: #ffb0b0;
+    border-radius: 10px;
+    padding: 10px 12px;
+    font-size: 13px;
+    margin: 0 0 12px;
+    overflow-wrap: anywhere;
+  }
+  .alert {
+    border: 1px solid #7a3535;
+    background: #22100f;
+    color: #ffb0b0;
+    border-radius: 10px;
+    padding: 10px 12px;
+    font-size: 13px;
+    margin: 0 0 10px;
+    overflow-wrap: anywhere;
+  }
+
+  /* ==========================================================================
+     开关
+     ========================================================================== */
+  .switch { position: relative; display: inline-block; width: 46px; height: 28px; flex: none; }
+  .switch input { position: absolute; opacity: 0; width: 100%; height: 100%; margin: 0; }
+  .switch .track {
+    position: absolute; inset: 0; background: #2a3040; border-radius: 999px; transition: background .15s;
+  }
+  .switch .track::before {
+    content: ""; position: absolute; width: 22px; height: 22px; left: 3px; top: 3px;
+    background: #c7cdd9; border-radius: 50%; transition: transform .15s;
+  }
+  .switch input:checked + .track { background: #2f8a57; }
+  .switch input:checked + .track::before { transform: translateX(18px); background: #fff; }
+
+  /* ==========================================================================
+     设备信息 / 网络信息
+     ========================================================================== */
+  #deviceInfo {
+    display: none; margin-top: 10px; padding: 9px 10px;
+    border-radius: 9px; font-size: 13px;
+    border: 1px solid #2c3245; background: #0e1118;
+  }
+  #deviceInfo.bad { border-color: #7a3535; }
+  #deviceInfo .dline { display: flex; justify-content: space-between; gap: 10px; margin: 3px 0; }
+  #deviceInfo .k { color: #8b93a7; flex: none; }
+  #deviceInfo .v { color: #dfe4ee; text-align: right; word-break: break-all; min-width: 0; }
+  #deviceInfo .v.bad { color: #ff7a7a; }
+  #deviceInfo.bad .v { color: #ffb0b0; }
+
+  .net-info {
+    margin-bottom: 12px; padding: 9px 10px;
+    border-radius: 9px; font-size: 13px;
+    border: 1px solid #2c3245; background: #0e1118;
+  }
+  .net-info .nline { display: flex; justify-content: space-between; gap: 10px; margin: 3px 0; }
+  .net-info .k { color: #8b93a7; flex: none; }
+  .net-info .v { color: #dfe4ee; text-align: right; word-break: break-all; min-width: 0; }
+
+  /* ==========================================================================
+     WiFi 列表
+     ========================================================================== */
+  .wifi-fallback { margin-bottom: 10px; }
+  .wifi-fallback input[readonly] { color: #9aa3b8; background: #0b0e14; }
+  .wifi-fallback .fallback-line { margin: 0; font-size: 12px; color: #8b93a7; }
+  .wifi-list { display: flex; flex-direction: column; gap: 9px; }
+  .wifi-row {
+    border: 1px solid #232838; border-radius: 11px;
+    padding: 9px; background: #10131b;
+  }
+  .wifi-row.off { opacity: .58; }
+  .wifi-row.has-error { border-color: #7a3535; }
+  .wifi-row-head { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+  .wifi-index { flex: 1; min-width: 0; font-size: 12px; color: #8b93a7; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .wifi-row .badge-current {
+    display: none; border-color: #2f6b47; color: #7fe0a3; background: #0e1c14;
+  }
+  .wifi-row .badge-current.on { display: inline-block; }
+  .wifi-field-label { margin-top: 8px; }
+  #addWifiBtn, #wifiSaveBtn { width: 100%; margin-top: 9px; }
+  .wifi-empty {
+    padding: 12px 10px; border: 1px dashed #2c3245; border-radius: 9px;
+    color: #8b93a7; font-size: 12px; text-align: center; background: #0e1118;
+  }
+  .wifi-row-head .icon-btn { flex: none; }
+  @media (max-width: 360px) {
+    .wifi-index { display: none; }
+    .wifi-row-head { gap: 6px; }
+    .wifi-row-head .icon-btn { min-width: 40px; padding: 5px 6px; }
+  }
+
+  /* ==========================================================================
+     时区与显示
+     ========================================================================== */
+  .tz-row { margin-top: 10px; }
+  .tz-label {
+    flex: none; min-width: 116px; text-align: center;
+    font-family: ui-monospace, Menlo, Consolas, monospace;
+    font-size: 13px; color: #9fd0ff;
+    background: #0e1118; border: 1px solid #2c3245; border-radius: 9px;
+    padding: 11px 8px; min-height: 44px; line-height: 20px;
+  }
+  .color-row { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; }
+  .color-row .lbl { flex: 1; font-size: 14px; min-width: 0; }
+  .color-row .hex {
+    font-size: 11px; color: #717a90; width: 66px; flex: none;
+    font-family: ui-monospace, Menlo, Consolas, monospace;
+  }
+  .color-row.invalid-t .hex { color: #ff7a7a; }
+  .num-row { display: flex; align-items: center; gap: 10px; margin-top: 4px; flex-wrap: wrap; }
+  .num-row input { max-width: 120px; }
+  .num-row .unit { color: #8b93a7; font-size: 13px; flex: none; }
+
+  /* ==========================================================================
+     目标行
+     ========================================================================== */
+  .target-row {
+    border: 1px solid #232838; border-radius: 11px;
+    padding: 9px; margin-bottom: 8px; background: #10131b;
+  }
+  .target-row.off { opacity: .58; }
+  .target-row.has-error { border-color: #7a3535; }
+  .target-head { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+  .badge {
+    flex: none; font-size: 11px; line-height: 18px; padding: 0 8px;
+    border-radius: 999px; border: 1px solid #2c3245;
+    color: #9aa3b8; background: #14171f; white-space: nowrap;
+  }
+  .badge-wait { border-color: #2b4a6f; color: #7fb2e5; background: #0f1a26; }
+  .badge-active { border-color: #2f6b47; color: #7fe0a3; background: #0e1c14; }
+  .badge-warn { border-color: #7a3535; color: #ff8a8a; background: #22100f; }
+  .badge-expired { border-color: #3a3f4d; color: #8b93a7; background: #14171f; }
+  .badge-off { border-color: #3a3f4d; color: #717a90; background: #14171f; }
+  .badge-invalid { border-color: #7a3535; color: #ff7a7a; background: #1f1012; }
+  .badge-soft { border-color: #2b4a6f; color: #9fc7ef; background: #0f1a26; }
+  .icon-btn { min-height: 44px; min-width: 44px; padding: 6px 8px; font-size: 14px; }
+  .p-del { border-color: #7a3535; color: #ff7a7a; }
+  .target-fields { display: flex; gap: 8px; margin-top: 9px; }
+  .target-field { min-width: 0; }
+  .target-field.date-field { flex: 1.15; }
+  .target-field.time-field { flex: 1; }
+  .field-mini { display: block; font-size: 11px; color: #717a90; margin-bottom: 4px; }
+  .note-input { margin-top: 8px; }
+  .target-sub { margin-top: 7px; font-size: 11px; color: #717a90; word-break: break-all; }
+  .target-sub.warn { color: #ff9a9a; }
+  .target-actions { display: flex; gap: 8px; margin-top: 8px; }
+  .target-actions button { flex: 1; }
+  #addTargetBtn { width: 100%; }
+  #removeExpiredBtn { width: 100%; }
+
+  /* ==========================================================================
+     页面列表 / 页面编辑 / 直播槽位
+     ========================================================================== */
+  #pageList { display: flex; flex-direction: column; gap: 8px; margin-bottom: 9px; }
+  .page-row {
+    border: 1px solid #232838; border-radius: 11px;
+    padding: 9px; background: #10131b;
+    min-width: 0;
+  }
+  .page-row.selected { border-color: #2b6cb0; background: #111a27; }
+  .page-row.off { opacity: .58; }
+  .page-row-head { display: flex; align-items: center; gap: 7px; flex-wrap: wrap; min-width: 0; }
+  .page-seq { flex: none; font-size: 11px; color: #717a90; }
+  .page-title {
+    flex: 1 1 120px; min-width: 0; font-size: 14px; font-weight: 600;
+    overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  }
+  .page-type { font-family: ui-monospace, Menlo, Consolas, monospace; }
+  .page-actions { display: flex; gap: 6px; margin-top: 8px; flex-wrap: wrap; }
+  .page-actions button { flex: 1 1 64px; padding-left: 6px; padding-right: 6px; }
+  #addPageBtn { width: 100%; }
+  #pageEditor { margin-top: 12px; border-top: 1px solid #232838; padding-top: 12px; }
+  .page-form { display: flex; flex-direction: column; gap: 8px; }
+  .page-form .field { margin: 0; }
+  .page-toggle { display: flex; align-items: center; gap: 9px; font-size: 13px; color: #b9c0d2; min-width: 0; }
+  .page-toggle span { min-width: 0; overflow-wrap: anywhere; }
+  .page-buttons { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 4px; }
+  .page-buttons button { flex: 1 1 150px; }
+
+  #liveEditor { margin-top: 12px; border-top: 1px dashed #2c3245; padding-top: 12px; }
+  .live-page-metric { margin-bottom: 10px; }
+  #liveRows { display: flex; flex-direction: column; gap: 10px; }
+  .live-slot {
+    border: 1px solid #232838; border-radius: 11px;
+    padding: 9px; background: #10131b; min-width: 0;
+    margin: 0;
+  }
+  .live-slot.off { opacity: .62; }
+  .live-slot.has-error { border-color: #7a3535; }
+  .live-slot legend { padding: 0 5px; font-size: 12px; color: #b9c0d2; }
+  .live-slot-head { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; flex-wrap: wrap; }
+  .live-slot-head .slot-name { flex: 1; min-width: 0; font-size: 12px; color: #8b93a7; }
+  .live-fields { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 8px; }
+  .live-fields .full { grid-column: 1 / -1; }
+  .live-field { min-width: 0; }
+  .live-field .field-mini { margin-bottom: 3px; }
+  .live-hint { margin-top: 6px; }
+  .live-source {
+    margin-top: 14px; border-top: 1px dashed #2c3245; padding-top: 12px;
+  }
+  .live-nums { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 8px; margin-top: 8px; }
+  @media (max-width: 340px) {
+    .live-fields, .live-nums { grid-template-columns: minmax(0, 1fr); }
+    .target-fields { flex-direction: column; }
+    .tz-label { min-width: 100px; }
+  }
+
+  /* ==========================================================================
+     LED 模拟器
+     ========================================================================== */
+  .led-wrap {
+    background: #000;
+    border-radius: 10px;
+    padding: 7px;
+    text-align: center;
+    overflow: hidden;
+    max-width: 100%;
+  }
+  #led { display: inline-block; background: #05070a; border-radius: 4px; max-width: 100%; }
+  #simMeta {
+    margin-top: 9px; font-size: 13px; color: #b9c0d2; text-align: center;
+    min-height: 38px; word-break: break-all; overflow-wrap: anywhere;
+  }
+  .sim-controls { margin-top: 12px; display: flex; flex-direction: column; gap: 9px; }
+  .sim-controls.disabled-block { opacity: .45; pointer-events: none; }
+  .sim-time-row { display: flex; gap: 8px; align-items: center; }
+  .sim-time-row input[type="date"] { flex: 1.15; min-width: 0; }
+  .sim-time-row input[type="time"] { flex: 1; min-width: 0; }
+  .speed-sel {
+    background: #0e1118; color: #e6e9f0; border: 1px solid #2c3245;
+    border-radius: 9px; font-size: 15px; padding: 9px 8px; min-height: 44px;
+  }
+  #playBtn { min-width: 104px; }
+  .sim-selects { display: grid; grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr); gap: 8px; margin-bottom: 10px; }
+  @media (max-width: 340px) { .sim-selects { grid-template-columns: minmax(0, 1fr); } }
+
+  /* ==========================================================================
+     状态日志
+     ========================================================================== */
+  .status-item {
+    border: 1px solid #232838; border-radius: 10px;
+    background: #10131b; padding: 9px 11px; margin-bottom: 8px; font-size: 13px;
+  }
+  .status-item .head { display: flex; align-items: center; gap: 7px; }
+  .status-item .dot { width: 8px; height: 8px; border-radius: 50%; flex: none; background: #4da3ff; }
+  .status-item.ok .dot { background: #4ade80; }
+  .status-item.err .dot { background: #ff5c5c; }
+  .status-item.info .dot { background: #4da3ff; }
+  .status-item .t { flex: 1; min-width: 0; overflow-wrap: anywhere; }
+  .status-item .ts {
+    color: #66708a; font-size: 11px; flex: none;
+    font-family: ui-monospace, Menlo, Consolas, monospace;
+  }
+  .status-item pre {
+    margin: 7px 0 0; padding: 8px; border-radius: 7px;
+    background: #0a0c11; border: 1px solid #232838;
+    color: #e0b3b3; font-family: ui-monospace, Menlo, Consolas, monospace;
+    font-size: 12px; line-height: 1.45; white-space: pre-wrap; word-break: break-all;
+    overflow-wrap: anywhere;
+  }
+</style>
+</head>
+<body>
+<main>
+  <h1>Ulanzi TC002 多计时器
+    <small>v3 · 多页面 · 直播上下两行 · 保存即热生效，无中间服务</small>
+  </h1>
+
+  <div id="v2Banner" class="banner" role="alert" style="display:none"></div>
+
+  <!-- ===================== 1. 时钟连接（自动） ===================== -->
+  <section class="card">
+    <p class="card-title">时钟连接（自动）</p>
+    <div id="deviceInfo"></div>
+    <div class="row">
+      <button id="reloadBtn" class="primary" type="button" style="flex:none">刷新状态</button>
+    </div>
+    <p class="hint">设备 IP 由 WiFi DHCP 自动获取，页面只连接当前打开它的时钟，不再保存 IP 列表；只保存 WiFi。浏览器里输入设备 IP 会自动跳到 :8080。</p>
+  </section>
+
+  <!-- ===================== 2. 网络与对时 ===================== -->
+  <section class="card">
+    <p class="card-title">网络与对时</p>
+    <div class="net-info">
+      <div class="nline">
+        <span class="k">当前 WiFi</span>
+        <span class="v" id="netSsid">未连接/未知</span>
+      </div>
+      <div class="nline">
+        <span class="k">IP 地址</span>
+        <span class="v" id="netIp">未知</span>
+      </div>
+    </div>
+
+    <div id="wifiFallback" class="wifi-fallback">
+      <label class="field" for="wifiFallbackSsid">当前 WiFi（只读）</label>
+      <input id="wifiFallbackSsid" type="text" readonly
+             placeholder="未连接/未知" autocomplete="off" spellcheck="false">
+      <p class="hint fallback-line" id="wifiFallbackHint">正在读取 WiFi 列表…</p>
+    </div>
+
+    <div id="wifiEditor" style="display:none">
+      <div id="wifiList" class="wifi-list"></div>
+      <button id="addWifiBtn" type="button">＋ 添加 WiFi</button>
+      <button id="wifiSaveBtn" type="button" class="primary">保存 WiFi 列表并重连</button>
+      <p class="hint" id="wifiHint">最多 8 个，设备按顺序尝试；已有密码的网络留空密码即可保留原密码，新网络留空会作为开放网络保存。</p>
+    </div>
+
+    <button id="timeSyncBtn" type="button" class="block">立即对时</button>
+    <label class="field net-field" for="ntpServerInput">NTP 服务器（可选）</label>
+    <input id="ntpServerInput" type="text" maxlength="64"
+           placeholder="留空使用内置；如 ntp.aliyun.com 或 192.168.1.2:123"
+           autocomplete="off" autocapitalize="none" spellcheck="false">
+    <p class="hint">联网时每分钟校时一次；留空使用内置列表，自定义服务器失败会自动回退内置。</p>
+    <p class="hint">保存 WiFi 列表后设备会短暂离线并按顺序重连；密码不写入浏览器本地存储，也不写入状态日志。</p>
+  </section>
+
+  <!-- ===================== 3. 时区与显示 ===================== -->
+  <section class="card">
+    <p class="card-title">时区与显示</p>
+    <label class="field" for="tzSelect">常用时区</label>
+    <select id="tzSelect" class="speed-sel"></select>
+    <div class="tz-row">
+      <label class="field" for="tzMinutesInput">自定义时区（分钟偏移）</label>
+      <div class="row">
+        <input id="tzMinutesInput" type="number" min="-720" max="840" step="1" value="480">
+        <span class="tz-label" id="tzLabel">UTC+08:00</span>
+      </div>
+    </div>
+    <p class="hint">只保存分钟偏移（-720..840），不自动处理夏令时；本地时间 = UTC + 偏移。</p>
+
+    <div class="color-row" id="colorRowClock" style="margin-top:12px">
+      <input type="color" id="colorClock" value="#ffffff">
+      <span class="lbl">时钟颜色</span>
+      <span class="hex" id="hexClock">#FFFFFF</span>
+    </div>
+    <div class="color-row" id="colorRowCountdown">
+      <input type="color" id="colorCountdown" value="#00ff00">
+      <span class="lbl">倒计时颜色</span>
+      <span class="hex" id="hexCountdown">#00FF00</span>
+    </div>
+    <div class="color-row" id="colorRowCountup">
+      <input type="color" id="colorCountup" value="#00bfff">
+      <span class="lbl">正计时颜色（倒计时结束后）</span>
+      <span class="hex" id="hexCountup">#00BFFF</span>
+    </div>
+    <div class="color-row" id="colorRowWarning">
+      <input type="color" id="colorWarning" value="#ff2020">
+      <span class="lbl">预警颜色（最后 N 秒常亮）</span>
+      <span class="hex" id="hexWarning">#FF2020</span>
+    </div>
+    <div class="color-row" id="colorRowDim">
+      <input type="color" id="colorDim" value="#808080">
+      <span class="lbl">占位暗色（-- / 日期 / NO LIVE）</span>
+      <span class="hex" id="hexDim">#808080</span>
+    </div>
+    <div class="num-row">
+      <span style="flex:1;min-width:0">预警秒数</span>
+      <input type="number" id="warnInput" min="0" max="600" step="1" value="10">
+      <span class="unit">秒（0–600，0=关闭）</span>
+    </div>
+  </section>
+
+  <!-- ===================== 4. 倒计时目标 ===================== -->
+  <section class="card">
+    <p class="card-title">倒计时目标（最多 12 个）</p>
+    <div id="targetList"></div>
+    <div class="target-actions">
+      <button id="addTargetBtn" type="button">＋ 添加目标</button>
+      <button id="removeExpiredBtn" type="button">移除已过期</button>
+    </div>
+    <p class="hint">日期时间为设备时区的本地墙上时间，时间必须带秒（HH:MM:SS）；备注只存在本浏览器，不写入设备。</p>
+  </section>
+
+  <!-- ===================== 5. 页面 ===================== -->
+  <section class="card">
+    <p class="card-title">页面（<span id="pageCount">0</span>）<span id="dirtyBadge" class="badge badge-warn" style="display:none">未保存修改</span></p>
+    <div id="pageList"></div>
+    <button id="addPageBtn" type="button">＋ 新增页面</button>
+    <p class="hint" id="pageHint">最多 12 页；列表顺序即旋钮顺序，停用页会被跳过。</p>
+
+    <div id="pageEditor">
+      <div class="page-form">
+        <div>
+          <label class="field" for="pageTitle">页面标题（≤16 字符，只用于网页/API）</label>
+          <input id="pageTitle" type="text" maxlength="16" autocomplete="off">
+          <p class="err-text" id="pageTitleError"></p>
+        </div>
+        <div>
+          <label class="field" for="pageShortTitle">切页短名（≤8 个可打印 ASCII，空则用类型名）</label>
+          <input id="pageShortTitle" type="text" maxlength="8" inputmode="text"
+                 autocomplete="off" autocapitalize="characters" spellcheck="false">
+          <p class="err-text" id="pageShortTitleError"></p>
+        </div>
+        <div>
+          <label class="field" for="pageType">页面类型</label>
+          <select id="pageType">
+            <option value="clock">时钟</option>
+            <option value="clock_countdown">时钟 + 倒计时（上下分屏）</option>
+            <option value="countdown">倒计时</option>
+            <option value="datetime">日期 + 时间</option>
+            <option value="live">直播（上下两行）</option>
+          </select>
+          <p class="hint" id="pageTypeHint"></p>
+        </div>
+        <div class="page-toggle">
+          <label class="switch">
+            <input type="checkbox" id="pageEnabled">
+            <span class="track"></span>
+          </label>
+          <span>启用此页（旋钮跳过停用页）</span>
+        </div>
+        <div class="page-toggle">
+          <label class="switch">
+            <input type="checkbox" id="defaultPageChk">
+            <span class="track"></span>
+          </label>
+          <span>设为默认页（仅影响开机，不立即切页）</span>
+        </div>
+        <div class="page-buttons">
+          <button id="setCurrentPageBtn" type="button">设为此页（运行中）</button>
+        </div>
+      </div>
+
+      <div id="liveEditor" style="display:none">
+        <label class="field" for="livePageMetric">本页默认指标（行内选“跟随页默认”时生效）</label>
+        <select id="livePageMetric" class="live-page-metric">
+          <option value="online">在线/人气</option>
+          <option value="likes">点赞</option>
+          <option value="fans">粉丝</option>
+          <option value="status">开播状态</option>
+          <option value="title">标题（v3.0 不上屏，保留）</option>
+          <option value="none">不显示</option>
+        </select>
+        <div id="liveRows"></div>
+        <p class="hint">直播页固定 2 个槽位；屏幕按上下两行显示（每行 8px），空槽显示 <code>--</code>。B 站 online 是人气值，不是并发人数。</p>
+      </div>
+    </div>
+
+    <div class="live-source">
+      <p class="card-title" style="margin-bottom:8px">直播数据源（全局）</p>
+      <label class="field" for="liveSource">数据源</label>
+      <select id="liveSource">
+        <option value="off">关闭（只显示占位，不产生请求）</option>
+        <option value="bridge">局域网中继 bridge（B 站/抖音/快手）</option>
+        <option value="hybrid">混合 hybrid（B 站设备直连 + 抖音/快手中继）</option>
+        <option value="push">推送 push（外部程序 POST /api/live）</option>
+      </select>
+      <div id="liveUrlRow" style="margin-top:8px">
+        <label class="field" for="liveUrl">中继地址（仅接受 http://，≤160；可留空）</label>
+        <input id="liveUrl" type="text" maxlength="160" inputmode="url"
+               placeholder="http://192.168.31.10:8081/live"
+               autocomplete="off" autocapitalize="none" spellcheck="false">
+      </div>
+      <div class="live-nums">
+        <div>
+          <label class="field" for="liveRefresh">刷新周期（秒，15–300）</label>
+          <input id="liveRefresh" type="number" min="15" max="300" step="1" value="30">
+        </div>
+        <div>
+          <label class="field" for="liveTimeout">超时（毫秒，1000–5000）</label>
+          <input id="liveTimeout" type="number" min="1000" max="5000" step="100" value="3000">
+        </div>
+      </div>
+      <p class="hint" id="liveSourceHint">关闭：直播页显示占位，不产生任何网络请求。</p>
+      <p class="hint">bridge/hybrid 需要一台与设备同一局域网的 PC/NAS/树莓派做中继（平台签名/风控由中继处理）；设备只接受明文 HTTP。hybrid 下 B 站由设备直连（镜像 /res/lib 自带 OpenSSL 1.1.1w），抖音/快手走中继；bridge 模式三平台都走中继。</p>
+    </div>
+  </section>
+
+  <!-- ===================== 6. 52 x 16 模拟器 ===================== -->
+  <section class="card">
+    <p class="card-title">52 × 16 屏幕模拟器</p>
+    <div class="sim-selects">
+      <div>
+        <label class="field" for="simPageSelect">预览页面</label>
+        <select id="simPageSelect" aria-label="预览页面"></select>
+      </div>
+      <div>
+        <label class="field" for="simLiveState">直播预览数据</label>
+        <select id="simLiveState" aria-label="直播预览数据">
+          <option value="none">无数据（-- 占位）</option>
+          <option value="sample">示例数据（不来自设备）</option>
+        </select>
+      </div>
+    </div>
+    <div class="led-wrap">
+      <canvas id="led" width="416" height="128"></canvas>
+    </div>
+    <div id="simMeta">尚未加载配置</div>
+
+    <div class="sim-controls">
+      <div class="row">
+        <label class="switch">
+          <input type="checkbox" id="followChk" checked>
+          <span class="track"></span>
+        </label>
+        <span style="flex:1;min-width:0">跟随真实时间（浏览器当前时刻 + 时区换算）</span>
+      </div>
+
+      <div class="sim-controls disabled-block" id="manualBox">
+        <div class="sim-time-row">
+          <input type="date" id="simDate" min="2000-01-01" max="2099-12-31">
+          <input type="time" id="simTime" step="1" value="00:00:00">
+        </div>
+        <div class="row">
+          <button id="playBtn" type="button">▶ 播放</button>
+          <select id="speedSel" class="speed-sel grow">
+            <option value="1">1x</option>
+            <option value="10">10x</option>
+            <option value="60">60x</option>
+            <option value="300">300x</option>
+            <option value="3600">3600x</option>
+          </select>
+        </div>
+      </div>
+    </div>
+    <p class="hint">分屏上下两半共用同一个模拟时刻；直播页与时间无关。示例数据只用于查看上下两行版式。</p>
+  </section>
+
+  <!-- ===================== 7. 保存 ===================== -->
+  <section class="card">
+    <p class="card-title">保存</p>
+    <div id="saveError" class="alert" role="alert" style="display:none"></div>
+    <button id="saveBtn" class="primary block" type="button">保存到时钟（热生效）</button>
+    <p class="hint">提交 v3 配置；成功后重新读取设备配置，并静默对时一次。失败详情见下方状态日志。v2 固件会拒绝 v3 配置，请先升级固件。</p>
+  </section>
+
+  <div id="statusLog"></div>
+</main>
+
+<script>
+"use strict";
+/* ============================================================================
+ * Ulanzi TC002 MultiTimer v3 - 设备内嵌配置页（单文件、零外链、无依赖）
+ *
+ * 接口契约（docs/V3-CONTRACT.md）：
+ *   GET  {base}/api/config -> {ok, config:v3, device:{...,page,capabilities}}
+ *   POST {base}/api/config   v3 schema（也接受 {"config":{...}} 包裹）
+ *   POST {base}/api/time     {"epoch": 1700000000..4102444800}
+ *   GET  {base}/api/wifi     -> {ok,current:{ssid,ip,wifi},max,networks:[...]}
+ *   POST {base}/api/wifi/list {"networks":[{ssid,enabled,password?},...]}
+ *
+ * v3 schema：pages[]（clock/clock_countdown/countdown/live，1..12）、
+ *   defaultPageId、live{source,url,refreshSec,timeoutMs}、colors.dim、
+ *   display.splitBottomWhenIdle；v2 字段保持。
+ *
+ * 约束：所有时间显示/输入一律 HH:MM:SS（含秒），日期 YYYY-MM-DD；
+ *       内部换算只用 tzOffsetMinutes（分钟）；WiFi 密码只提交给
+ *       /api/wifi/list，不写 localStorage、不写日志；备注只写 localStorage。
+ * ========================================================================== */
+
+/* ------------------------------ TomThumb 子集 ------------------------------ */
+/* 与 src/Fonts/TomThumb.h 同源（BSD-3-Clause，见 THIRD_PARTY_NOTICES.md）。
+ * 每项：[字形高, yOffset, 每行 8bit 位图]。可见宽度在启动时按位扫描。 */
+var TOM_THUMB = {
+  " ":[1,-5,[0]],
+  "0":[5,-5,[224,160,160,160,224]], "1":[5,-5,[64,192,64,64,224]],
+  "2":[5,-5,[224,32,224,128,224]], "3":[5,-5,[224,32,224,32,224]],
+  "4":[5,-5,[160,160,224,32,32]], "5":[5,-5,[224,128,224,32,224]],
+  "6":[5,-5,[224,128,224,160,224]], "7":[5,-5,[224,32,32,32,32]],
+  "8":[5,-5,[224,160,224,160,224]], "9":[5,-5,[224,160,224,32,224]],
+  "A":[5,-5,[192,160,224,160,160]], "B":[5,-5,[192,160,192,160,192]],
+  "C":[5,-5,[64,160,128,160,64]], "D":[5,-5,[192,160,160,160,192]],
+  "E":[5,-5,[224,128,224,128,224]], "F":[5,-5,[224,128,224,128,128]],
+  "G":[5,-5,[96,128,160,160,96]], "H":[5,-5,[160,160,224,160,160]],
+  "I":[5,-5,[128,128,128,128,128]], "J":[5,-5,[32,32,32,160,64]],
+  "K":[5,-5,[160,160,192,160,160]], "L":[5,-5,[128,128,128,128,224]],
+  "M":[5,-5,[136,216,168,136,136]], "N":[5,-5,[144,208,176,144,144]],
+  "O":[5,-5,[64,160,160,160,64]], "P":[5,-5,[224,160,192,128,128]],
+  "Q":[5,-5,[64,160,160,160,112]], "R":[5,-5,[224,160,192,160,160]],
+  "S":[5,-5,[224,128,224,32,224]], "T":[5,-5,[224,64,64,64,64]],
+  "U":[5,-5,[160,160,160,160,224]], "V":[5,-5,[160,160,160,160,64]],
+  "W":[5,-5,[136,136,136,168,80]], "X":[5,-5,[160,160,64,160,160]],
+  "Y":[5,-5,[160,160,224,32,192]], "Z":[5,-5,[224,32,64,128,224]],
+  "-":[1,-3,[224]], ".":[1,-1,[128]], ":":[3,-4,[128,0,128]],
+  "/":[5,-5,[32,32,64,128,128]], "d":[5,-5,[32,96,160,160,96]],
+  "w":[4,-4,[160,224,224,224]], "y":[5,-4,[160,160,96,32,64]]
+};
+var TOM_WIDTH = {};
+(function buildFontWidths() {
+  Object.keys(TOM_THUMB).forEach(function (ch) {
+    var rows = TOM_THUMB[ch][2];
+    var width = 0;
+    rows.forEach(function (bits) {
+      for (var col = 0; col < 8; col++) {
+        if (bits & (0x80 >> col)) { if (col + 1 > width) width = col + 1; }
+      }
+    });
+    TOM_WIDTH[ch] = width;
+  });
+})();
+
+/* ------------------------------ 常量 ------------------------------ */
+var MAX_TARGETS = 12;
+var MAX_WIFI = 8;
+var MAX_PAGES = 12;
+var MAX_ROOMS = 2;
+var MAX_TITLE_CHARS = 16;
+var MAX_TITLE_BYTES = 48;
+var MAX_SHORT_TITLE = 8;
+var TZ_MIN = -720;
+var TZ_MAX = 840;
+var WARN_MAX = 600;
+var TIME_VALID_EPOCH = 1700000000;   /* 2023-11-14，与固件 TimeKeeper 一致 */
+var MAX_EPOCH = 4102444800;          /* 2100-01-01 */
+var AUTO_SYNC_THRESHOLD = 2;         /* 秒：设备与浏览器偏差 > 2 秒自动对时 */
+var WIFI_REFRESH_DELAY_MS = 2500;    /* 保存成功约 800ms 后设备重连，等 2.5s 再回读列表 */
+var MAX_CONFIG_BODY = 16384;
+var LS_NOTES = "multitimer.notes.v2";
+var EMPTY_COLOR = "#404040";
+var DIM_COLOR = "#808080";
+var WIFI_OFFLINE_TIP = "保存 WiFi 列表后设备会短暂离线，并按列表顺序尝试重连。继续？";
+var WIFI_PASSWORD_KEEP = "留空保留原密码";
+var WIFI_PASSWORD_OPEN = "密码（开放网络可留空）";
+
+var DEFAULT_COLORS = { clock: "#FFFFFF", countdown: "#00FF00", countup: "#00BFFF", warning: "#FF2020", dim: "#808080" };
+var PAGE_TYPES = ["clock", "clock_countdown", "countdown", "live", "datetime"];
+var PAGE_TYPE_LABELS = {
+  clock: "时钟",
+  clock_countdown: "时钟+倒计时",
+  countdown: "倒计时",
+  live: "直播",
+  datetime: "日期+时间"
+};
+var PAGE_TYPE_SHORT = {
+  clock: "CLOCK",
+  clock_countdown: "CLOCK+CD",
+  countdown: "COUNTDOWN",
+  live: "LIVE",
+  datetime: "DATETIME"
+};
+var LIVE_SOURCES = ["off", "bridge", "hybrid", "push"];
+var LIVE_SOURCE_LABELS = {
+  off: "关闭",
+  bridge: "局域网中继",
+  hybrid: "混合（B 站设备直连 + 抖音/快手中继）",
+  push: "推送"
+};
+var LIVE_METRICS = ["online", "likes", "fans", "status", "title", "none"];
+var LIVE_METRIC_LABELS = {
+  online: "在线/人气",
+  likes: "点赞",
+  fans: "粉丝",
+  status: "开播状态",
+  title: "标题（不上屏）",
+  none: "不显示"
+};
+var PLATFORMS = ["bilibili", "douyin", "kuaishou"];
+var PLATFORM_LABELS = { bilibili: "B 站", douyin: "抖音", kuaishou: "快手" };
+var PLATFORM_LETTERS = { bilibili: "B", douyin: "D", kuaishou: "K" };
+var PLATFORM_COLORS = { bilibili: "#FF6699", douyin: "#FFFFFF", kuaishou: "#FF9900" };
+var LIVE_CAPABILITIES = {
+  bilibili: ["online", "likes", "fans", "status", "title"],
+  douyin: ["online", "likes", "fans", "status", "title"],
+  kuaishou: ["online", "likes", "fans", "status", "title"]
+};
+var ROOM_RULES = {
+  bilibili: {
+    re: /^\d{1,12}$/, max: 12, inputmode: "numeric",
+    placeholder: "如 21452505 或粘贴直播间链接",
+    hint: "B 站房间号 1–12 位数字，可粘贴 live.bilibili.com 链接"
+  },
+  douyin: {
+    re: /^\d{1,20}$/, max: 20, inputmode: "numeric",
+    placeholder: "如 88776655 或粘贴直播间链接",
+    hint: "抖音房间号 1–20 位数字（按字符串保存），可粘贴 live.douyin.com 链接"
+  },
+  kuaishou: {
+    re: /^[A-Za-z0-9_-]{1,32}$/, max: 32, inputmode: "text",
+    placeholder: "如 3x8k2m9 或粘贴直播间链接",
+    hint: "快手房间号 1–32 位字母/数字/_-，可粘贴 live.kuaishou.com/u/... 链接"
+  }
+};
+
+/* 常用时区（分钟偏移）。只存分钟，不处理夏令时。 */
+var TZ_ZONES = [
+  { m: -720, n: "国际日期变更线以西" },
+  { m: -660, n: "美属萨摩亚" },
+  { m: -600, n: "夏威夷" },
+  { m: -570, n: "马克萨斯群岛" },
+  { m: -540, n: "阿拉斯加" },
+  { m: -480, n: "洛杉矶 / 温哥华" },
+  { m: -420, n: "丹佛 / 菲尼克斯" },
+  { m: -360, n: "芝加哥 / 墨西哥城" },
+  { m: -300, n: "纽约 / 多伦多" },
+  { m: -240, n: "圣地亚哥 / 哈利法克斯" },
+  { m: -210, n: "纽芬兰" },
+  { m: -180, n: "圣保罗 / 布宜诺斯艾利斯" },
+  { m: -120, n: "中大西洋" },
+  { m: -60, n: "亚速尔群岛" },
+  { m: 0, n: "伦敦 / 里斯本" },
+  { m: 60, n: "柏林 / 巴黎 / 罗马" },
+  { m: 120, n: "开罗 / 雅典 / 赫尔辛基" },
+  { m: 180, n: "莫斯科 / 伊斯坦布尔 / 利雅得" },
+  { m: 210, n: "德黑兰" },
+  { m: 240, n: "迪拜 / 巴库" },
+  { m: 270, n: "喀布尔" },
+  { m: 300, n: "卡拉奇 / 塔什干" },
+  { m: 330, n: "新德里 / 孟买" },
+  { m: 345, n: "加德满都" },
+  { m: 360, n: "达卡 / 阿拉木图" },
+  { m: 390, n: "仰光" },
+  { m: 420, n: "曼谷 / 雅加达 / 河内" },
+  { m: 480, n: "北京 / 上海 / 新加坡 / 香港" },
+  { m: 525, n: "尤克拉" },
+  { m: 540, n: "东京 / 首尔" },
+  { m: 570, n: "阿德莱德 / 达尔文" },
+  { m: 600, n: "悉尼 / 布里斯班" },
+  { m: 630, n: "豪勋爵岛" },
+  { m: 660, n: "所罗门群岛 / 新喀里多尼亚" },
+  { m: 720, n: "奥克兰 / 斐济" },
+  { m: 765, n: "查塔姆群岛" },
+  { m: 780, n: "汤加 / 萨摩亚" },
+  { m: 840, n: "基里巴斯（莱恩群岛）" }
+];
+
+/* ------------------------------ 基础工具 ------------------------------ */
+function pad2(n) {
+  var v = Math.floor(Math.abs(n));
+  return (v < 10 ? "0" : "") + v;
+}
+
+/* 严格十进制整数（允许正负号）；非法返回 null */
+function parseInteger(value) {
+  var s = String(value === null || value === undefined ? "" : value).trim();
+  if (!/^[+-]?\d+$/.test(s)) return null;
+  var n = parseInt(s, 10);
+  return isFinite(n) ? n : null;
+}
+
+function daysInMonth(year, month) {
+  if (month === 2) {
+    return ((year % 4 === 0 && year % 100 !== 0) || year % 400 === 0) ? 29 : 28;
+  }
+  var days = [31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31];
+  return days[month - 1];
+}
+
+function isValidDateParts(year, month, day) {
+  if (!isFinite(year) || !isFinite(month) || !isFinite(day)) return false;
+  if (year < 2000 || year > 2099) return false;
+  if (month < 1 || month > 12) return false;
+  if (day < 1 || day > daysInMonth(year, month)) return false;
+  return true;
+}
+
+/* "YYYY-MM-DD" -> {y,m,d}；非法（含日历非法）返回 null */
+function parseDateStr(text) {
+  var s = String(text === null || text === undefined ? "" : text).trim();
+  var match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(s);
+  if (!match) return null;
+  var y = parseInt(match[1], 10);
+  var m = parseInt(match[2], 10);
+  var d = parseInt(match[3], 10);
+  if (!isValidDateParts(y, m, d)) return null;
+  return { y: y, m: m, d: d };
+}
+
+function normalizeDateInput(text) {
+  var p = parseDateStr(text);
+  if (!p) return "";
+  return p.y + "-" + pad2(p.m) + "-" + pad2(p.d);
+}
+
+/* "HH:MM" / "HH:MM:SS" -> {h,m,s}；非法返回 null */
+function parseTimeStr(text) {
+  var s = String(text === null || text === undefined ? "" : text).trim();
+  var match = /^(\d{1,2}):([0-5]\d)(?::([0-5]\d))?$/.exec(s);
+  if (!match) return null;
+  var h = parseInt(match[1], 10);
+  var m = parseInt(match[2], 10);
+  var sec = match[3] === undefined ? 0 : parseInt(match[3], 10);
+  if (h > 23) return null;
+  return { h: h, m: m, s: sec };
+}
+
+/* 规范化为 HH:MM:SS；非法返回 ""（浏览器 time 控件可能省略 :SS，这里补零） */
+function normalizeTimeInput(text) {
+  var p = parseTimeStr(text);
+  if (!p) return "";
+  return pad2(p.h) + ":" + pad2(p.m) + ":" + pad2(p.s);
+}
+
+/* 秒数 -> HH:MM:SS（小时不截断，仅用于时长展示） */
+function fmtHMS(totalSeconds) {
+  var s = Math.max(0, Math.floor(totalSeconds));
+  var h = Math.floor(s / 3600);
+  var m = Math.floor((s % 3600) / 60);
+  var sec = s % 60;
+  return pad2(h) + ":" + pad2(m) + ":" + pad2(sec);
+}
+
+/* 人类可读时长：有天数时 "N 天 HH:MM:SS"，否则 HH:MM:SS */
+function fmtDuration(totalSeconds) {
+  var s = Math.max(0, Math.floor(totalSeconds));
+  var d = Math.floor(s / 86400);
+  var rest = s % 86400;
+  return d > 0 ? (d + " 天 " + fmtHMS(rest)) : fmtHMS(rest);
+}
+
+/* 分钟偏移 -> UTC±HH:MM */
+function fmtUtcOffset(minutes) {
+  var m = Math.round(minutes);
+  var sign = m < 0 ? "-" : "+";
+  var abs = Math.abs(m);
+  return "UTC" + sign + pad2(Math.floor(abs / 60)) + ":" + pad2(abs % 60);
+}
+
+/* UTC epoch + 分钟偏移 -> 本地 "YYYY-MM-DD HH:MM:SS" */
+function fmtLocalDateTime(epoch, tzMinutes) {
+  var local = epochToLocalParts(epoch, tzMinutes);
+  return local.date + " " + local.time;
+}
+
+/* 本地日期时间 -> UTC epoch；非法返回 null */
+function dateTimeToEpoch(dateStr, timeStr, tzMinutes) {
+  var dp = parseDateStr(dateStr);
+  var tp = parseTimeStr(timeStr);
+  if (!dp || !tp) return null;
+  var ms = Date.UTC(dp.y, dp.m - 1, dp.d, tp.h, tp.m, tp.s);
+  return Math.floor(ms / 1000) - tzMinutes * 60;
+}
+
+/* UTC epoch + 分钟偏移 -> {date, time, secondsOfDay} */
+function epochToLocalParts(epoch, tzMinutes) {
+  var d = new Date((Math.floor(epoch) + tzMinutes * 60) * 1000);
+  var date = d.getUTCFullYear() + "-" + pad2(d.getUTCMonth() + 1) + "-" + pad2(d.getUTCDate());
+  var secOfDay = d.getUTCHours() * 3600 + d.getUTCMinutes() * 60 + d.getUTCSeconds();
+  return { date: date, time: fmtHMS(secOfDay), secondsOfDay: secOfDay };
+}
+
+/* 设备时间与浏览器偏差是否超过 2 秒（含“设备时间无效”） */
+function shouldAutoSync(deviceUtc, browserUtc) {
+  var dev = parseInteger(deviceUtc);
+  if (dev === null) return false;
+  if (dev < TIME_VALID_EPOCH) return true;
+  return Math.abs(browserUtc - dev) > AUTO_SYNC_THRESHOLD;
+}
+
+/* 倒计时文本：<100h -> HH:MM:SS；>=100h -> DdHH:MM:SS（D 不补零） */
+function formatCountdown(totalSeconds) {
+  var s = Math.max(0, Math.floor(totalSeconds));
+  if (s < 100 * 3600) {
+    return { text: fmtHMS(s), smallFont: false };
+  }
+  var days = Math.floor(s / 86400);
+  var rest = s % 86400;
+  return { text: days + "d" + fmtHMS(rest), smallFont: true };
+}
+
+/* #RRGGBB / RRGGBB -> "#RRGGBB"；非法返回 null */
+function normalizeColor(value) {
+  var match = /^#?([0-9a-fA-F]{6})$/.exec(String(value === null || value === undefined ? "" : value).trim());
+  return match ? ("#" + match[1].toUpperCase()) : null;
+}
+
+function hexToRgb(hex) {
+  var match = /^#?([0-9a-f]{6})$/i.exec(hex || "");
+  if (!match) return { r: 255, g: 255, b: 255 };
+  var v = parseInt(match[1], 16);
+  return { r: (v >> 16) & 255, g: (v >> 8) & 255, b: v & 255 };
+}
+
+function mixRgb(a, b, t) {
+  return {
+    r: a.r + (b.r - a.r) * t,
+    g: a.g + (b.g - a.g) * t,
+    b: a.b + (b.b - a.b) * t
+  };
+}
+
+function browserEpoch() {
+  return Math.floor(Date.now() / 1000);
+}
+
+function deepCopy(value) {
+  try { return JSON.parse(JSON.stringify(value)); } catch (e) { return value; }
+}
+
+function utf8ByteLength(text) {
+  var s = String(text === null || text === undefined ? "" : text);
+  try {
+    if (typeof TextEncoder !== "undefined") return new TextEncoder().encode(s).length;
+    return unescape(encodeURIComponent(s)).length;
+  } catch (e) {
+    return s.length;
+  }
+}
+
+function isPrintableAscii(text) {
+  return /^[\x20-\x7E]*$/.test(String(text === null || text === undefined ? "" : text));
+}
+
+function isControlFree(text) {
+  return !/[\x00-\x1F\x7F]/.test(String(text === null || text === undefined ? "" : text));
+}
+
+function clampNumber(value, min, max) {
+  if (value < min) return min;
+  if (value > max) return max;
+  return value;
+}
+
+/* 自定义 NTP：空串合法；否则 host 或 host:port（端口 1..65535）。 */
+function isValidNtpServer(value) {
+  var text = String(value === null || value === undefined ? "" : value).trim();
+  if (!text) return true;
+  if (text.length > 64) return false;
+  var match = /^([A-Za-z0-9._-]+)(?::([0-9]{1,5}))?$/.exec(text);
+  if (!match) return false;
+  if (match[2]) {
+    var port = parseInt(match[2], 10);
+    if (!(port >= 1 && port <= 65535)) return false;
+  }
+  return true;
+}
+
+/* ------------------------------ 直播文本/房间号 ------------------------------ */
+function metricOptionsFor(platform) {
+  var list = LIVE_CAPABILITIES[platform];
+  return Array.isArray(list) ? list.slice() : LIVE_METRICS.filter(function (m) { return m !== "none"; });
+}
+
+function metricLabel(metric, platform) {
+  if (metric === "online") {
+    if (platform === "bilibili") return "在线/人气";
+    if (platform === "douyin") return "在线观众";
+    return "在线/人气";
+  }
+  return LIVE_METRIC_LABELS[metric] || String(metric || "");
+}
+
+function sourceNeedsUrl(source) {
+  return source === "bridge" || source === "hybrid";
+}
+
+function sourceLabel(source) {
+  return LIVE_SOURCE_LABELS[source] || "关闭";
+}
+
+function roomRule(platform) {
+  return ROOM_RULES[platform] || ROOM_RULES.bilibili;
+}
+
+function roomFormatOk(platform, room) {
+  var text = String(room === null || room === undefined ? "" : room).trim();
+  if (!text) return true; /* 空由 enabled 决定是否报错 */
+  if (text.length > 40) return false;
+  return roomRule(platform).re.test(text);
+}
+
+function roomLengthOk(room) {
+  return String(room === null || room === undefined ? "" : room).trim().length <= 40;
+}
+
+/* 粘贴分享链接时尽力提取房间号；绝不发网络请求。 */
+function parseRoomLink(platform, input) {
+  var text = String(input === null || input === undefined ? "" : input).trim();
+  if (!text) return { ok: false, value: "", reason: "" };
+  var rule = roomRule(platform);
+  if (rule.re.test(text)) return { ok: true, value: text, extracted: false };
+  var compact = text.replace(/\s+/g, "");
+  if ((platform === "bilibili" || platform === "douyin") && rule.re.test(compact)) {
+    return { ok: true, value: compact, extracted: false };
+  }
+  var urlPatterns = {
+    bilibili: /(?:https?:\/\/)?(?:[\w-]+\.)?live\.bilibili\.com\/(\d{1,12})(?:[\/?#][^\s]*)?/i,
+    douyin: /(?:https?:\/\/)?(?:[\w-]+\.)?live\.douyin\.com\/(\d{1,20})(?:[\/?#][^\s]*)?/i,
+    kuaishou: /(?:https?:\/\/)?(?:[\w-]+\.)?live\.kuaishou\.com\/u\/([A-Za-z0-9_-]{1,32})(?:[\/?#][^\s]*)?/i
+  };
+  var matched = urlPatterns[platform] ? urlPatterns[platform].exec(compact) : null;
+  if (matched) return { ok: true, value: matched[1], extracted: true };
+  if (/(?:b23\.tv|v\.douyin\.com|v\.kuaishou\.com|kuaishou\.com\/f\/)/i.test(text)) {
+    return { ok: false, value: text, reason: "短链请先打开后复制完整直播间地址或房间号" };
+  }
+  var foreign = /live\.bilibili\.com|live\.douyin\.com|live\.kuaishou\.com/i.test(text);
+  if (foreign) {
+    return { ok: false, value: text, reason: "请粘贴对应平台的直播间地址或房间号" };
+  }
+  if (/^(?:https?:\/\/|www\.)/i.test(compact)) {
+    return { ok: false, value: text, reason: "请粘贴对应平台的直播间地址或房间号" };
+  }
+  return { ok: false, value: text, reason: "" };
+}
+
+function sanitizeRoomInput(platform, input) {
+  var text = String(input === null || input === undefined ? "" : input).trim();
+  var parsed = parseRoomLink(platform, text);
+  if (parsed.ok) return parsed.value;
+  if (platform === "bilibili" || platform === "douyin") {
+    return text.replace(/\s+/g, "");
+  }
+  return text;
+}
+
+/* 数值 -> 屏幕 6 字符内；w=万，y=亿；0 是有效值，缺失/负数 -> --。 */
+function formatLiveValue(value) {
+  var n = Number(value);
+  if (value === null || value === undefined || value === "" || !isFinite(n) || n < 0) return "--";
+  n = Math.floor(n);
+  if (n < 10000) return String(n);
+  if (n < 100000000) {
+    var w = n / 10000;
+    if (w < 10) return trimFixed(w, 1) + "w";
+    if (w < 100) return trimFixed(w, 1) + "w";
+    if (w < 1000) return String(Math.round(w)) + "w";
+    return trimFixed(n / 100000000, 1) + "y";
+  }
+  var y = n / 100000000;
+  if (y < 10) return trimFixed(y, 1) + "y";
+  if (y < 100) return trimFixed(y, 1) + "y";
+  if (y < 1000) return String(Math.round(y)) + "y";
+  return "999y";
+}
+
+function trimFixed(value, digits) {
+  var s = Number(value).toFixed(digits);
+  if (s.indexOf(".") >= 0) s = s.replace(/0+$/, "").replace(/\.$/, "");
+  return s;
+}
+
+/* 默认 label：平台字母 + 房间尾 2 位，如 B25；手填 label 优先。 */
+function liveLabelFor(roomConfig) {
+  var configured = String(roomConfig && roomConfig.label || "").trim();
+  if (configured) {
+    var cleaned = configured.toUpperCase().replace(/[^A-Z0-9.\-]/g, "");
+    if (cleaned) return cleaned.slice(0, 3);
+  }
+  var platform = roomConfig && roomConfig.platform || "bilibili";
+  var letter = PLATFORM_LETTERS[platform] || "?";
+  var room = String(roomConfig && roomConfig.room || "").trim();
+  if (!room) return letter;
+  var tail = room.replace(/[^A-Za-z0-9]/g, "").slice(-2).toUpperCase();
+  return (letter + tail).slice(0, 3);
+}
+
+function sampleLiveValue(platform, rowIndex) {
+  if (platform === "bilibili") return rowIndex === 0 ? 12345 : 987654321;
+  if (platform === "douyin") return rowIndex === 0 ? 8765 : 1200000;
+  return rowIndex === 0 ? 560 : 120000000;
+}
+
+/* ------------------------------ 默认配置 / 规范化 ------------------------------ */
+function defaultRooms() {
+  return [
+    { platform: "bilibili", room: "", label: "", enabled: false, metric: "" },
+    { platform: "douyin", room: "", label: "", enabled: false, metric: "" }
+  ];
+}
+
+function defaultPages() {
+  return [
+    { id: "p0", type: "clock", title: "时钟", shortTitle: "CLOCK", enabled: true },
+    { id: "p1", type: "clock_countdown", title: "时钟+倒计时", shortTitle: "CLOCK+CD", enabled: true },
+    { id: "p2", type: "countdown", title: "倒计时", shortTitle: "COUNTDOWN", enabled: true },
+    { id: "p3", type: "live", title: "直播", shortTitle: "LIVE", enabled: true,
+      metric: "online", rooms: defaultRooms() }
+  ];
+}
+
+function defaultConfig() {
+  return {
+    version: 3,
+    tzOffsetMinutes: 480,
+    warnSeconds: 10,
+    ntpServer: "",
+    colors: { clock: DEFAULT_COLORS.clock, countdown: DEFAULT_COLORS.countdown,
+      countup: DEFAULT_COLORS.countup,
+      warning: DEFAULT_COLORS.warning, dim: DEFAULT_COLORS.dim },
+    display: { splitBottomWhenIdle: "date" },
+    targets: [],
+    live: { source: "off", url: "", refreshSec: 30, timeoutMs: 3000 },
+    defaultPageId: "p0",
+    pages: defaultPages()
+  };
+}
+
+function detectConfigVersion(raw) {
+  if (!raw || typeof raw !== "object") return 0;
+  var v = parseInteger(raw.version);
+  if (v !== null) return v;
+  if (raw.tzOffsetMinutes !== undefined || raw.colors || raw.targets) return 2;
+  return 0;
+}
+
+function pageIdOk(id) {
+  return /^[a-z0-9_-]{1,8}$/.test(String(id || ""));
+}
+
+function generatePageId(used) {
+  used = used || {};
+  for (var i = 0; i < 100; i++) {
+    var id = "p" + i;
+    if (!used[id]) return id;
+  }
+  return "p" + Date.now().toString(36).slice(-6);
+}
+
+function collectPagesById(pages) {
+  var map = {};
+  if (Array.isArray(pages)) {
+    pages.forEach(function (page) {
+      if (page && typeof page.id === "string") map[page.id] = page;
+    });
+  }
+  return map;
+}
+
+function normalizeRooms(raw, platformFallback) {
+  var rooms = Array.isArray(raw) ? raw.slice(0, MAX_ROOMS) : [];
+  var result = [];
+  for (var i = 0; i < MAX_ROOMS; i++) {
+    var provided = i < rooms.length;
+    var item = provided && rooms[i] && typeof rooms[i] === "object" ? rooms[i] : {};
+    var platform = PLATFORMS.indexOf(item.platform) >= 0
+      ? item.platform
+      : (platformFallback[i] || "bilibili");
+    var room = String(item.room === null || item.room === undefined ? "" : item.room).trim().slice(0, 40);
+    var label = String(item.label === null || item.label === undefined ? "" : item.label).trim();
+    if (!isPrintableAscii(label) || label.length > 3) label = "";
+    var metric = LIVE_METRICS.indexOf(item.metric) >= 0 && item.metric !== "none" ? item.metric : "";
+    result.push({
+      platform: platform,
+      room: room,
+      label: label,
+      enabled: provided ? item.enabled !== false : false,
+      metric: metric
+    });
+  }
+  return result;
+}
+
+function normalizePage(raw, usedIds, index) {
+  var page = raw && typeof raw === "object" ? raw : {};
+  var type = PAGE_TYPES.indexOf(page.type) >= 0 ? page.type : "clock";
+  var id = typeof page.id === "string" ? page.id : "";
+  if (!pageIdOk(id) || usedIds[id]) {
+    id = generatePageId(usedIds);
+  }
+  usedIds[id] = true;
+  var title = String(page.title === null || page.title === undefined ? "" : page.title);
+  title = title.replace(/[\x00-\x1F\x7F]/g, "").slice(0, MAX_TITLE_CHARS);
+  var shortTitle = String(page.shortTitle === null || page.shortTitle === undefined ? "" : page.shortTitle);
+  shortTitle = shortTitle.replace(/[^\x20-\x7E]/g, "").slice(0, MAX_SHORT_TITLE);
+  var normalized = {
+    id: id,
+    type: type,
+    title: title,
+    shortTitle: shortTitle,
+    enabled: page.enabled !== false
+  };
+  if (type === "live") {
+    normalized.metric = LIVE_METRICS.indexOf(page.metric) >= 0 && page.metric !== "none"
+      ? page.metric : "online";
+    normalized.rooms = normalizeRooms(page.rooms,
+      index === 0 ? ["bilibili", "douyin"] : ["bilibili", "douyin"]);
+  }
+  return normalized;
+}
+
+function migrateV2Pages() {
+  return [
+    { id: "p0", type: "clock", title: "时钟", shortTitle: "CLOCK", enabled: true },
+    { id: "p1", type: "clock_countdown", title: "时钟+倒计时", shortTitle: "CLOCK+CD", enabled: true },
+    { id: "p2", type: "countdown", title: "倒计时", shortTitle: "COUNTDOWN", enabled: true }
+  ];
+}
+
+/* 把 GET /api/config 的 config 规范化；非法单项保留可编辑状态，交由行内校验拦截。 */
+function normalizeConfig(raw) {
+  var cfg = defaultConfig();
+  if (!raw || typeof raw !== "object") return cfg;
+
+  var sourceVersion = detectConfigVersion(raw);
+  var legacy = sourceVersion === 2 ||
+    (!Array.isArray(raw.pages) && sourceVersion !== 3 &&
+      (raw.tzOffsetMinutes !== undefined || raw.colors || raw.targets));
+
+  var tz = parseInteger(raw.tzOffsetMinutes);
+  if (tz !== null && tz >= TZ_MIN && tz <= TZ_MAX) cfg.tzOffsetMinutes = tz;
+
+  var warn = parseInteger(raw.warnSeconds);
+  if (warn !== null && warn >= 0 && warn <= WARN_MAX) cfg.warnSeconds = warn;
+
+  if (typeof raw.ntpServer === "string") cfg.ntpServer = raw.ntpServer.trim();
+
+  if (raw.colors && typeof raw.colors === "object") {
+    ["clock", "countdown", "countup", "warning", "dim"].forEach(function (key) {
+      var color = normalizeColor(raw.colors[key]);
+      if (color) cfg.colors[key] = color;
+    });
+  }
+  if (cfg.colors.dim === DEFAULT_COLORS.dim) {
+    var dim = normalizeColor(raw.colors && raw.colors.dim);
+    if (dim) cfg.colors.dim = dim;
+  }
+
+  if (raw.display && typeof raw.display === "object") {
+    cfg.display.splitBottomWhenIdle = raw.display.splitBottomWhenIdle === "blank" ? "blank" : "date";
+  }
+
+  if (Array.isArray(raw.targets)) {
+    cfg.targets = raw.targets.slice(0, MAX_TARGETS).map(function (item) {
+      var target = item && typeof item === "object" ? item : {};
+      var rawDate = typeof target.date === "string" ? target.date.trim() : "";
+      var rawTime = typeof target.time === "string" ? target.time.trim() : "";
+      return {
+        date: normalizeDateInput(rawDate) || rawDate,
+        time: normalizeTimeInput(rawTime) || rawTime,
+        enabled: target.enabled !== false
+      };
+    });
+  }
+
+  if (raw.live && typeof raw.live === "object") {
+    var source = LIVE_SOURCES.indexOf(raw.live.source) >= 0 ? raw.live.source : "off";
+    cfg.live.source = legacy ? "off" : source;
+    if (typeof raw.live.url === "string") cfg.live.url = raw.live.url.trim();
+    var refresh = parseInteger(raw.live.refreshSec);
+    if (refresh !== null && refresh >= 15 && refresh <= 300) cfg.live.refreshSec = refresh;
+    var timeout = parseInteger(raw.live.timeoutMs);
+    if (timeout !== null && timeout >= 1000 && timeout <= 5000) cfg.live.timeoutMs = timeout;
+  }
+
+  if (legacy) {
+    cfg.pages = migrateV2Pages();
+    cfg.defaultPageId = "p0";
+    return cfg;
+  }
+
+  if (Array.isArray(raw.pages) && raw.pages.length) {
+    var used = {};
+    cfg.pages = raw.pages.slice(0, MAX_PAGES).map(function (page, index) {
+      return normalizePage(page, used, index);
+    });
+  } else {
+    cfg.pages = defaultPages();
+  }
+
+  var wantedDefault = typeof raw.defaultPageId === "string" ? raw.defaultPageId : "";
+  var defaultExists = cfg.pages.some(function (page) { return page.id === wantedDefault; });
+  cfg.defaultPageId = defaultExists ? wantedDefault : cfg.pages[0].id;
+  return cfg;
+}
+
+/* ------------------------------ v3 payload ------------------------------ */
+function buildPayload(config) {
+  config = config || defaultConfig();
+  var pages = Array.isArray(config.pages) && config.pages.length ? config.pages : defaultPages();
+  var pageIds = {};
+  pages.forEach(function (page) { if (page && page.id) pageIds[page.id] = true; });
+  var defaultPageId = pageIds[config.defaultPageId] ? config.defaultPageId : pages[0].id;
+
+  var outPages = pages.map(function (page) {
+    var type = PAGE_TYPES.indexOf(page.type) >= 0 ? page.type : "clock";
+    var item = {
+      id: String(page.id || ""),
+      type: type,
+      title: String(page.title || ""),
+      shortTitle: String(page.shortTitle || ""),
+      enabled: page.enabled !== false
+    };
+    if (type === "live") {
+      item.metric = LIVE_METRICS.indexOf(page.metric) >= 0 ? page.metric : "online";
+      var rooms = Array.isArray(page.rooms) ? page.rooms.slice(0, MAX_ROOMS) : [];
+      item.rooms = [];
+      for (var i = 0; i < MAX_ROOMS; i++) {
+        var provided = i < rooms.length;
+        var room = provided && rooms[i] && typeof rooms[i] === "object" ? rooms[i] : {};
+        item.rooms.push({
+          platform: PLATFORMS.indexOf(room.platform) >= 0 ? room.platform : "bilibili",
+          room: String(room.room === null || room.room === undefined ? "" : room.room).trim(),
+          label: String(room.label === null || room.label === undefined ? "" : room.label).trim(),
+          enabled: provided ? room.enabled !== false : false,
+          metric: LIVE_METRICS.indexOf(room.metric) >= 0 && room.metric !== "none" ? room.metric : ""
+        });
+      }
+    }
+    return item;
+  });
+
+  var live = config.live && typeof config.live === "object" ? config.live : {};
+  var source = LIVE_SOURCES.indexOf(live.source) >= 0 ? live.source : "off";
+  var url = String(live.url === null || live.url === undefined ? "" : live.url).trim();
+  if (!/^http:\/\/\S+$/.test(url) || url.length > 160) url = "";
+  var refresh = parseInteger(live.refreshSec);
+  if (refresh === null || refresh < 15 || refresh > 300) refresh = 30;
+  var timeout = parseInteger(live.timeoutMs);
+  if (timeout === null || timeout < 1000 || timeout > 5000) timeout = 3000;
+
+  return {
+    version: 3,
+    tzOffsetMinutes: config.tzOffsetMinutes,
+    warnSeconds: config.warnSeconds,
+    ntpServer: config.ntpServer || "",
+    colors: {
+      clock: config.colors.clock,
+      countdown: config.colors.countdown,
+      countup: config.colors.countup,
+      warning: config.colors.warning,
+      dim: config.colors.dim
+    },
+    display: { splitBottomWhenIdle: config.display.splitBottomWhenIdle === "blank" ? "blank" : "date" },
+    targets: (config.targets || []).map(function (target) {
+      return { date: target.date, time: target.time, enabled: target.enabled !== false };
+    }),
+    live: { source: source, url: url, refreshSec: refresh, timeoutMs: timeout },
+    defaultPageId: defaultPageId,
+    pages: outPages
+  };
+}
+
+function payloadSignature(config) {
+  return JSON.stringify(buildPayload(config));
+}
+
+function payloadSizeBytes(config) {
+  return utf8ByteLength(JSON.stringify(buildPayload(config)));
+}
+
+/* ------------------------------ 运行状态 ------------------------------ */
+var state = {
+  config: defaultConfig(),
+  baselineSignature: "",
+  device: null,           /* 最近一次 GET /api/config 返回的 device */
+  deviceClock: null,      /* {baseUtc, baseMs, valid}：设备时钟本机推算 */
+  devicePageId: "",
+  devicePageIds: {},
+  legacy: false,
+  follow: true,
+  playing: false,
+  speed: 1,
+  manualEpoch: Math.floor(Date.now() / 1000),
+  showErrors: false,
+  selectedPageId: "p0",
+  livePreview: "none"
+};
+
+var notes = loadNotes();
+var targetRows = [];
+var wifiRowRefs = [];
+var pageRowRefs = {};
+var liveRowRefs = [];
+var deviceRefs = { localTime: null, lastSync: null, tz: null };
+var wifiState = {
+  available: false,
+  loading: false,
+  saving: false,
+  current: null,
+  networks: [],
+  known: {}              /* SSID -> 设备是否已有密码；仅用于占位/开放网络提示 */
+};
+var busy = false;
+var timeSyncing = false;
+var autoSyncDone = false;
+var lastFrameKey = "";
+var lastFrameTs = null;
+var lastSimMeta = "";
+
+/* ------------------------------ DOM 引用 ------------------------------ */
+var $ = function (id) { return document.getElementById(id); };
+var reloadBtn = $("reloadBtn");
+var deviceInfo = $("deviceInfo");
+var netSsid = $("netSsid");
+var netIp = $("netIp");
+var wifiFallback = $("wifiFallback");
+var wifiFallbackSsid = $("wifiFallbackSsid");
+var wifiFallbackHint = $("wifiFallbackHint");
+var wifiEditor = $("wifiEditor");
+var wifiList = $("wifiList");
+var addWifiBtn = $("addWifiBtn");
+var wifiSaveBtn = $("wifiSaveBtn");
+var wifiHint = $("wifiHint");
+var timeSyncBtn = $("timeSyncBtn");
+var ntpServerInput = $("ntpServerInput");
+var tzSelect = $("tzSelect");
+var tzMinutesInput = $("tzMinutesInput");
+var tzLabel = $("tzLabel");
+var colorClock = $("colorClock");
+var colorCountdown = $("colorCountdown");
+var colorCountup = $("colorCountup");
+var colorWarning = $("colorWarning");
+var colorDim = $("colorDim");
+var colorRowClock = $("colorRowClock");
+var colorRowCountdown = $("colorRowCountdown");
+var colorRowCountup = $("colorRowCountup");
+var colorRowWarning = $("colorRowWarning");
+var colorRowDim = $("colorRowDim");
+var hexClock = $("hexClock");
+var hexCountdown = $("hexCountdown");
+var hexCountup = $("hexCountup");
+var hexWarning = $("hexWarning");
+var hexDim = $("hexDim");
+var warnInput = $("warnInput");
+var targetList = $("targetList");
+var addTargetBtn = $("addTargetBtn");
+var removeExpiredBtn = $("removeExpiredBtn");
+var pageCount = $("pageCount");
+var pageList = $("pageList");
+var addPageBtn = $("addPageBtn");
+var pageHint = $("pageHint");
+var dirtyBadge = $("dirtyBadge");
+var pageEditor = $("pageEditor");
+var pageTitle = $("pageTitle");
+var pageTitleError = $("pageTitleError");
+var pageShortTitle = $("pageShortTitle");
+var pageShortTitleError = $("pageShortTitleError");
+var pageType = $("pageType");
+var pageTypeHint = $("pageTypeHint");
+var pageEnabled = $("pageEnabled");
+var defaultPageChk = $("defaultPageChk");
+var setCurrentPageBtn = $("setCurrentPageBtn");
+var liveEditor = $("liveEditor");
+var livePageMetric = $("livePageMetric");
+var liveRows = $("liveRows");
+var liveSource = $("liveSource");
+var liveUrl = $("liveUrl");
+var liveUrlRow = $("liveUrlRow");
+var liveRefresh = $("liveRefresh");
+var liveTimeout = $("liveTimeout");
+var liveSourceHint = $("liveSourceHint");
+var canvas = $("led");
+var ctx = canvas.getContext ? canvas.getContext("2d") : null;
+var simMeta = $("simMeta");
+var simPageSelect = $("simPageSelect");
+var simLiveState = $("simLiveState");
+var followChk = $("followChk");
+var manualBox = $("manualBox");
+var simDate = $("simDate");
+var simTime = $("simTime");
+var playBtn = $("playBtn");
+var speedSel = $("speedSel");
+var saveBtn = $("saveBtn");
+var saveError = $("saveError");
+var statusLog = $("statusLog");
+var v2Banner = $("v2Banner");
+
+/* ------------------------------ localStorage ------------------------------ */
+function lsGet(key) {
+  try { return window.localStorage.getItem(key); } catch (e) { return null; }
+}
+function lsSet(key, value) {
+  try { window.localStorage.setItem(key, value); } catch (e) { /* 忽略隐私模式错误 */ }
+}
+
+/* ------------------------------ 时钟地址（自动） ------------------------------ */
+function normalizeBaseUrl(value) {
+  return String(value === null || value === undefined ? "" : value).trim().replace(/\/+$/, "");
+}
+function loadNotes() {
+  try {
+    var obj = JSON.parse(lsGet(LS_NOTES) || "{}");
+    if (obj && typeof obj === "object" && !Array.isArray(obj)) return obj;
+  } catch (e) { /* 损坏则丢弃 */ }
+  return {};
+}
+function saveNotes() {
+  try { lsSet(LS_NOTES, JSON.stringify(notes)); } catch (e) { /* 忽略 */ }
+}
+
+function noteKeyFor(target) {
+  var date = normalizeDateInput(target && target.date);
+  var time = normalizeTimeInput(target && target.time);
+  return (date && time) ? (date + " " + time) : "";
+}
+function noteKeyInUse(key, except) {
+  if (!key) return false;
+  var used = false;
+  state.config.targets.forEach(function (t) {
+    if (t === except) return;
+    if (t._noteKey === key || noteKeyFor(t) === key) used = true;
+  });
+  return used;
+}
+
+/* ------------------------------ 状态日志（不自动滚动） ------------------------------ */
+function addStatus(kind, title, detail) {
+  var item = document.createElement("div");
+  item.className = "status-item " + kind;
+
+  var head = document.createElement("div");
+  head.className = "head";
+
+  var dot = document.createElement("span");
+  dot.className = "dot";
+
+  var titleEl = document.createElement("span");
+  titleEl.className = "t";
+  titleEl.textContent = title;
+
+  var ts = document.createElement("span");
+  ts.className = "ts";
+  var now = new Date();
+  ts.textContent = pad2(now.getHours()) + ":" + pad2(now.getMinutes()) + ":" + pad2(now.getSeconds());
+
+  head.appendChild(dot);
+  head.appendChild(titleEl);
+  head.appendChild(ts);
+  item.appendChild(head);
+
+  if (detail) {
+    var pre = document.createElement("pre");
+    pre.textContent = typeof detail === "string" ? detail : JSON.stringify(detail, null, 2);
+    item.appendChild(pre);
+  }
+
+  statusLog.appendChild(item);
+  while (statusLog.children.length > 30) statusLog.removeChild(statusLog.firstChild);
+  /* 不调用 scrollIntoView：首次加载/保存错误都不能把用户滚走；状态区在页面底部。 */
+}
+
+/* ------------------------------ HTTP ------------------------------ */
+function getBase() {
+  return defaultBase();
+}
+function defaultBase() {
+  var protocol = window.location.protocol;
+  if (protocol !== "http:" && protocol !== "https:") return "";
+  var origin = String(window.location.origin || "").replace(/\/+$/, "");
+  if (!/^https?:\/\//.test(origin)) return "";
+  if (protocol === "http:") {
+    if (/:80$/.test(origin)) {
+      origin = origin.replace(/:80$/, ":8080");
+    } else if (!/:\d+$/.test(origin)) {
+      origin += ":8080";
+    }
+  }
+  return origin;
+}
+function errorText(e) {
+  return String((e && e.message) || e || "未知错误");
+}
+function fullResponse(response) {
+  if (!response) return "无响应";
+  var parts = ["HTTP " + response.status];
+  if (response.data && typeof response.data.error === "string") {
+    parts.push(response.data.error);
+  } else if (response.data) {
+    parts.push(JSON.stringify(response.data, null, 2));
+  } else {
+    parts.push("（无响应体或响应不是 JSON）");
+  }
+  return parts.join("：");
+}
+
+function api(method, path, body) {
+  var base = getBase();
+  if (!base) return Promise.reject(new Error("无法确定时钟地址，请通过设备 IP 打开页面"));
+  var options = { method: method, headers: {} };
+  if (body !== undefined) {
+    options.headers["Content-Type"] = "application/json";
+    options.body = JSON.stringify(body);
+  }
+  return fetch(base + path, options).then(function (response) {
+    return response.json().catch(function () { return null; }).then(function (data) {
+      return { status: response.status, data: data };
+    });
+  });
+}
+
+function refreshBusy() {
+  reloadBtn.disabled = busy;
+  saveBtn.disabled = busy || state.legacy;
+  timeSyncBtn.disabled = busy || timeSyncing;
+  updatePageEditorButtons();
+}
+
+function updateDirty() {
+  if (!dirtyBadge) return;
+  var dirty = isDirty();
+  dirtyBadge.style.display = dirty ? "inline-block" : "none";
+}
+
+function isDirty() {
+  return payloadSignature(state.config) !== state.baselineSignature;
+}
+
+function setBaseline() {
+  state.baselineSignature = payloadSignature(state.config);
+  updateDirty();
+}
+
+/* ------------------------------ WiFi 列表 ------------------------------ */
+function knownWifiPassword(ssid) {
+  return !!(ssid && Object.prototype.hasOwnProperty.call(wifiState.known, ssid) &&
+      wifiState.known[ssid] === true);
+}
+
+function wifiPasswordPlaceholder(ssid) {
+  return knownWifiPassword(ssid) ? WIFI_PASSWORD_KEEP : WIFI_PASSWORD_OPEN;
+}
+
+function refreshWifiButtons() {
+  addWifiBtn.disabled = !wifiState.available || wifiState.saving ||
+      wifiState.networks.length >= MAX_WIFI;
+  wifiSaveBtn.disabled = !wifiState.available || wifiState.saving;
+}
+
+function wifiRowClassName(network) {
+  return "wifi-row" + (network.enabled === false ? " off" : "");
+}
+
+function updateWifiCurrentBadge(badge, ssid) {
+  var current = isCurrentWifi(String(ssid || "").trim());
+  badge.className = "badge badge-current" + (current ? " on" : "");
+  badge.textContent = current ? "当前" : "";
+}
+
+function moveWifi(network, delta) {
+  if (wifiState.saving) return;
+  var index = wifiState.networks.indexOf(network);
+  var next = index + delta;
+  if (index < 0 || next < 0 || next >= wifiState.networks.length) return;
+  var row = wifiState.networks[index];
+  wifiState.networks[index] = wifiState.networks[next];
+  wifiState.networks[next] = row;
+  renderWifiList();
+}
+
+function removeWifi(network) {
+  if (wifiState.saving) return;
+  var index = wifiState.networks.indexOf(network);
+  if (index < 0) return;
+  wifiState.networks.splice(index, 1);
+  renderWifiList();
+}
+
+function addWifi() {
+  if (wifiState.saving || !wifiState.available || wifiState.networks.length >= MAX_WIFI) return;
+  wifiState.networks.push({
+    ssid: "",
+    enabled: true,
+    password: "",
+    hasPassword: false
+  });
+  renderWifiList();
+  var last = wifiRowRefs[wifiRowRefs.length - 1];
+  if (last && last.ssidInput && last.ssidInput.focus) last.ssidInput.focus();
+}
+
+function renderWifiList() {
+  wifiList.innerHTML = "";
+  wifiRowRefs = [];
+
+  if (!wifiState.networks.length) {
+    var empty = document.createElement("div");
+    empty.className = "wifi-empty";
+    empty.textContent = "暂无 WiFi；添加后保存，或保存空列表清除设备兜底列表。";
+    wifiList.appendChild(empty);
+  }
+
+  wifiState.networks.forEach(function (network, index) {
+    var row = document.createElement("div");
+    row.className = wifiRowClassName(network);
+    row.dataset.index = String(index);
+
+    var head = document.createElement("div");
+    head.className = "wifi-row-head";
+
+    var sw = document.createElement("label");
+    sw.className = "switch";
+    sw.title = "启用/停用此 WiFi";
+    var checkbox = document.createElement("input");
+    checkbox.type = "checkbox";
+    checkbox.checked = network.enabled !== false;
+    var track = document.createElement("span");
+    track.className = "track";
+    sw.appendChild(checkbox);
+    sw.appendChild(track);
+
+    var indexEl = document.createElement("span");
+    indexEl.className = "wifi-index";
+    indexEl.textContent = "WiFi " + (index + 1);
+
+    var currentBadge = document.createElement("span");
+    updateWifiCurrentBadge(currentBadge, network.ssid);
+
+    var upBtn = document.createElement("button");
+    upBtn.type = "button";
+    upBtn.className = "icon-btn";
+    upBtn.textContent = "↑";
+    upBtn.title = "上移";
+    upBtn.disabled = index === 0;
+    upBtn.addEventListener("click", function () { moveWifi(network, -1); });
+
+    var downBtn = document.createElement("button");
+    downBtn.type = "button";
+    downBtn.className = "icon-btn";
+    downBtn.textContent = "↓";
+    downBtn.title = "下移";
+    downBtn.disabled = index === wifiState.networks.length - 1;
+    downBtn.addEventListener("click", function () { moveWifi(network, 1); });
+
+    var delBtn = document.createElement("button");
+    delBtn.type = "button";
+    delBtn.className = "icon-btn p-del";
+    delBtn.textContent = "✕";
+    delBtn.title = "删除";
+    delBtn.addEventListener("click", function () { removeWifi(network); });
+
+    head.appendChild(sw);
+    head.appendChild(indexEl);
+    head.appendChild(currentBadge);
+    head.appendChild(upBtn);
+    head.appendChild(downBtn);
+    head.appendChild(delBtn);
+
+    var ssidLabel = document.createElement("span");
+    ssidLabel.className = "field-mini wifi-field-label";
+    ssidLabel.textContent = "SSID";
+
+    var ssidInput = document.createElement("input");
+    ssidInput.type = "text";
+    ssidInput.className = "wifi-ssid-input";
+    ssidInput.maxLength = 32;
+    ssidInput.value = network.ssid || "";
+    ssidInput.placeholder = "WiFi 名称（SSID）";
+    ssidInput.autocomplete = "off";
+    ssidInput.setAttribute("autocapitalize", "none");
+    ssidInput.setAttribute("spellcheck", "false");
+    ssidInput.setAttribute("aria-label", "WiFi " + (index + 1) + " SSID");
+
+    var passLabel = document.createElement("span");
+    passLabel.className = "field-mini wifi-field-label";
+    passLabel.textContent = "密码";
+
+    var passInput = document.createElement("input");
+    passInput.type = "password";
+    passInput.className = "wifi-pass-input";
+    passInput.maxLength = 64;
+    passInput.value = network.password || "";
+    passInput.placeholder = wifiPasswordPlaceholder(String(network.ssid || "").trim());
+    passInput.autocomplete = "new-password";
+    passInput.setAttribute("aria-label", "WiFi " + (index + 1) + " 密码");
+
+    function markEdited() {
+      ssidInput.className = "wifi-ssid-input";
+      passInput.className = "wifi-pass-input";
+      row.className = wifiRowClassName(network);
+    }
+
+    checkbox.addEventListener("change", function () {
+      network.enabled = checkbox.checked;
+      row.className = wifiRowClassName(network);
+    });
+
+    ssidInput.addEventListener("input", function () {
+      network.ssid = ssidInput.value;
+      markEdited();
+      passInput.placeholder = wifiPasswordPlaceholder(String(network.ssid || "").trim());
+      updateWifiCurrentBadge(currentBadge, network.ssid);
+    });
+
+    passInput.addEventListener("input", function () {
+      network.password = passInput.value;
+      markEdited();
+    });
+
+    row.appendChild(head);
+    row.appendChild(ssidLabel);
+    row.appendChild(ssidInput);
+    row.appendChild(passLabel);
+    row.appendChild(passInput);
+    wifiList.appendChild(row);
+
+    wifiRowRefs.push({
+      network: network,
+      row: row,
+      ssidInput: ssidInput,
+      passInput: passInput,
+      currentBadge: currentBadge,
+      checkbox: checkbox
+    });
+  });
+
+  refreshWifiButtons();
+}
+
+function validateWifiDrafts() {
+  var errors = [];
+  var payload = [];
+  var openNew = [];
+  var trimmed = wifiState.networks.map(function (network) {
+    return String(network.ssid === null || network.ssid === undefined ? "" : network.ssid).trim();
+  });
+  var counts = {};
+  trimmed.forEach(function (ssid) {
+    if (ssid) counts[ssid] = (counts[ssid] || 0) + 1;
+  });
+
+  var duplicateReported = {};
+  var ssidBad = [];
+  var passBad = [];
+  wifiState.networks.forEach(function (network, index) {
+    var ssid = trimmed[index];
+    var password = String(network.password === null || network.password === undefined ? "" : network.password);
+    var badSsid = false;
+    var badPass = false;
+
+    if (!ssid) {
+      errors.push("第 " + (index + 1) + " 个 WiFi 名称不能为空");
+      badSsid = true;
+    } else if (ssid.length > 32) {
+      errors.push("第 " + (index + 1) + " 个 WiFi 名称超过 32 个字符");
+      badSsid = true;
+    }
+    if (ssid && counts[ssid] > 1) {
+      badSsid = true;
+      if (!duplicateReported[ssid]) {
+        errors.push("WiFi 名称重复：" + ssid);
+        duplicateReported[ssid] = true;
+      }
+    }
+    if (password.length > 64) {
+      errors.push("第 " + (index + 1) + " 个 WiFi 密码超过 64 个字符");
+      badPass = true;
+    }
+    if (ssid && !Object.prototype.hasOwnProperty.call(wifiState.known, ssid) && !password) {
+      openNew.push(ssid);
+    }
+    ssidBad[index] = badSsid;
+    passBad[index] = badPass;
+
+    var item = { ssid: ssid, enabled: network.enabled !== false };
+    if (password) item.password = password;
+    payload.push(item);
+  });
+
+  wifiRowRefs.forEach(function (refs, index) {
+    refs.ssidInput.className = "wifi-ssid-input" + (ssidBad[index] ? " invalid-t" : "");
+    refs.passInput.className = "wifi-pass-input" + (passBad[index] ? " invalid-t" : "");
+    refs.row.className = wifiRowClassName(refs.network) +
+        ((ssidBad[index] || passBad[index]) ? " has-error" : "");
+  });
+
+  if (errors.length) {
+    for (var i = 0; i < ssidBad.length; i++) {
+      if (ssidBad[i] && wifiRowRefs[i] && wifiRowRefs[i].ssidInput.focus) {
+        wifiRowRefs[i].ssidInput.focus();
+        break;
+      }
+    }
+  }
+
+  return {
+    ok: errors.length === 0,
+    errors: errors,
+    networks: payload,
+    openNew: openNew
+  };
+}
+
+function showWifiFallback(hint) {
+  wifiFallback.style.display = "block";
+  wifiEditor.style.display = "none";
+  wifiFallbackSsid.value = currentWifiSsid() || "未连接/未知";
+  wifiFallbackHint.textContent = hint;
+}
+
+function showWifiEditor() {
+  wifiFallback.style.display = "none";
+  wifiEditor.style.display = "block";
+  renderWifiList();
+}
+
+function loadWifiList(options) {
+  options = options || {};
+  var preserve = options.preserve === true;
+  var base = getBase();
+  wifiState.loading = true;
+
+  if (!preserve) {
+    wifiState.available = false;
+    wifiState.current = null;
+    wifiState.networks = [];
+    wifiState.known = {};
+    wifiRowRefs = [];
+  }
+
+  if (!base) {
+    wifiState.loading = false;
+    wifiState.available = false;
+    showWifiFallback("未设置时钟地址；填写地址并重新加载后可读取 WiFi 列表。");
+    refreshWifiButtons();
+    return Promise.resolve(false);
+  }
+
+  if (!preserve) showWifiFallback("正在读取 WiFi 列表…");
+  refreshWifiButtons();
+
+  return api("GET", "/api/wifi").then(function (response) {
+    if (!(response && response.status >= 200 && response.status < 300 &&
+        response.data && response.data.ok === true && Array.isArray(response.data.networks))) {
+      wifiState.loading = false;
+      if (preserve) {
+        /* 设备刚保存列表，通常正在 800ms 后重连：保留已保存的本地列表，不要退回只读。 */
+        refreshWifiButtons();
+        addStatus("info", "设备重连中，可稍后重新加载",
+            "保存已成功；暂时无法读取最新 WiFi 列表。\n" + fullResponse(response));
+        return false;
+      }
+      wifiState.available = false;
+      showWifiFallback("无法读取 WiFi 列表；当前 WiFi 仅按上方信息只读显示。详细错误见状态日志。");
+      refreshWifiButtons();
+      addStatus("err", "读取 WiFi 列表失败", fullResponse(response));
+      return false;
+    }
+
+    var current = response.data.current;
+    wifiState.current = (current && typeof current === "object") ? {
+      ssid: typeof current.ssid === "string" ? current.ssid.trim() : "",
+      ip: current.ip ? String(current.ip) : "",
+      wifi: current.wifi !== false
+    } : null;
+
+    var known = {};
+    var networks = [];
+    response.data.networks.slice(0, MAX_WIFI).forEach(function (item) {
+      if (!item || typeof item !== "object") return;
+      var ssid = typeof item.ssid === "string" ? item.ssid.trim() : "";
+      if (!ssid) return;
+      var hasPassword = item.hasPassword === true;
+      networks.push({
+        ssid: ssid,
+        enabled: item.enabled !== false,
+        password: "",
+        hasPassword: hasPassword
+      });
+      known[ssid] = hasPassword;
+    });
+
+    wifiState.networks = networks;
+    wifiState.known = known;
+    wifiState.loading = false;
+    wifiState.available = true;
+    showWifiEditor();
+    renderNetwork();
+    return true;
+  }).catch(function (error) {
+    wifiState.loading = false;
+    if (preserve) {
+      refreshWifiButtons();
+      addStatus("info", "设备重连中，可稍后重新加载",
+          "保存已成功；暂时无法读取最新 WiFi 列表。\n" + errorText(error));
+      return false;
+    }
+    wifiState.available = false;
+    showWifiFallback("无法读取 WiFi 列表；当前 WiFi 仅按上方信息只读显示。详细错误见状态日志。");
+    refreshWifiButtons();
+    addStatus("err", "读取 WiFi 列表失败：网络错误", errorText(error));
+    return false;
+  });
+}
+
+function refreshWifiAfterSave() {
+  return new Promise(function (resolve) {
+    setTimeout(resolve, WIFI_REFRESH_DELAY_MS);
+  }).then(function () {
+    return loadWifiList({ preserve: true });
+  });
+}
+
+function saveWifiList() {
+  if (wifiState.saving || !wifiState.available) return;
+  var validation = validateWifiDrafts();
+  if (!validation.ok) {
+    addStatus("err", "保存 WiFi 列表中止：请修正以下问题",
+        validation.errors.map(function (line) { return "• " + line; }).join("\n"));
+    return;
+  }
+
+  var confirmText = WIFI_OFFLINE_TIP;
+  if (validation.openNew.length) {
+    confirmText += "\n\n以下新 WiFi 未填写密码，将保存为无密码/开放网络：\n" +
+        validation.openNew.join("、");
+  }
+  if (!window.confirm(confirmText)) return;
+
+  wifiState.saving = true;
+  refreshWifiButtons();
+  addStatus("info", "正在保存 WiFi 列表（" + validation.networks.length + " 个网络）…");
+
+  api("POST", "/api/wifi/list", { networks: validation.networks }).then(function (response) {
+    if (!(response && response.status >= 200 && response.status < 300 &&
+        response.data && response.data.ok === true)) {
+      addStatus("err", "保存 WiFi 列表失败", fullResponse(response));
+      return false;
+    }
+
+    var count = parseInteger(response.data.count);
+    if (count === null || count < 0) count = validation.networks.length;
+    var message = typeof response.data.message === "string" ? response.data.message : "";
+    wifiState.networks.forEach(function (network) { network.password = ""; });
+    renderWifiList();
+    addStatus("ok", "WiFi 列表已保存（" + count + " 个网络）",
+        "设备将按列表顺序重连" + (message ? "：" + message : "") + "；约 800ms 后开始重连。");
+    return refreshWifiAfterSave();
+  }).catch(function (error) {
+    addStatus("err", "保存 WiFi 列表失败：网络错误", errorText(error));
+    return false;
+  }).then(function () {
+    wifiState.saving = false;
+    refreshWifiButtons();
+  });
+}
+
+/* ------------------------------ 时区 UI ------------------------------ */
+function populateTzSelect() {
+  tzSelect.innerHTML = "";
+  TZ_ZONES.forEach(function (zone) {
+    var option = document.createElement("option");
+    option.value = String(zone.m);
+    option.textContent = fmtUtcOffset(zone.m) + " · " + zone.n;
+    tzSelect.appendChild(option);
+  });
+  var custom = document.createElement("option");
+  custom.value = "custom";
+  custom.textContent = "自定义（使用下方分钟输入）";
+  tzSelect.appendChild(custom);
+}
+
+function syncTzSelect(minutes) {
+  tzSelect.value = "custom";
+  for (var i = 0; i < TZ_ZONES.length; i++) {
+    if (TZ_ZONES[i].m === minutes) {
+      tzSelect.value = String(minutes);
+      return;
+    }
+  }
+}
+
+function applyTzMinutes(minutes, opts) {
+  if (minutes === null || minutes < TZ_MIN || minutes > TZ_MAX) return false;
+  var old = state.config.tzOffsetMinutes;
+  var manualParts = null;
+  if (!state.follow && !(opts && opts.keepManualWall)) {
+    manualParts = epochToLocalParts(state.manualEpoch, old);
+  }
+
+  state.config.tzOffsetMinutes = minutes;
+  tzMinutesInput.value = String(minutes);
+  tzMinutesInput.className = "";
+  tzLabel.textContent = fmtUtcOffset(minutes);
+  syncTzSelect(minutes);
+
+  if (manualParts) {
+    var epoch = dateTimeToEpoch(manualParts.date, manualParts.time, minutes);
+    if (epoch !== null) state.manualEpoch = epoch;
+  }
+  renderDevice();
+  updateTargetBadges(true);
+  updateDirty();
+  return true;
+}
+
+/* ------------------------------ 颜色 / 预警 ------------------------------ */
+function bindColor(input, hexLabel, row, key) {
+  function sync() {
+    var color = normalizeColor(input.value);
+    if (color) {
+      state.config.colors[key] = color;
+      hexLabel.textContent = color;
+      input.className = "";
+      row.className = "color-row";
+    } else {
+      hexLabel.textContent = "无效";
+      input.className = "invalid-t";
+      row.className = "color-row invalid-t";
+    }
+    updateDirty();
+  }
+  input.addEventListener("input", sync);
+  input.addEventListener("change", sync);
+  sync();
+}
+
+/* ------------------------------ 设备时钟 ------------------------------ */
+function applyDeviceClock(device) {
+  var utc = parseInteger(device && device.timeUtc);
+  if (utc === null || utc <= 0) {
+    state.deviceClock = null;
+    return;
+  }
+  var valid = utc >= TIME_VALID_EPOCH && device.timeValid !== false;
+  state.deviceClock = { baseUtc: utc, baseMs: Date.now(), valid: valid };
+}
+
+function setDeviceClock(epoch) {
+  var value = Math.floor(epoch);
+  state.deviceClock = {
+    baseUtc: value,
+    baseMs: Date.now(),
+    valid: value >= TIME_VALID_EPOCH && value <= MAX_EPOCH
+  };
+}
+
+function deviceClockValid() {
+  return !!(state.deviceClock && state.deviceClock.valid);
+}
+
+function deviceNowUtc() {
+  if (!state.deviceClock) return null;
+  var elapsed = Math.floor((Date.now() - state.deviceClock.baseMs) / 1000);
+  if (elapsed < 0) elapsed = 0;
+  return state.deviceClock.baseUtc + elapsed;
+}
+
+/* 设备信息展示用设备自己上报的时区；缺失时回退到当前配置。 */
+function deviceTzMinutes() {
+  var tz = parseInteger(state.device && state.device.tzOffsetMinutes);
+  if (tz !== null && tz >= TZ_MIN && tz <= TZ_MAX) return tz;
+  return state.config.tzOffsetMinutes;
+}
+
+function deviceLocalTimeText() {
+  var now = deviceNowUtc();
+  if (now === null || !deviceClockValid()) return "--:--:--";
+  return fmtLocalDateTime(now, deviceTzMinutes());
+}
+
+function lastSyncText(device) {
+  var last = parseInteger(device && device.lastSyncUtc);
+  if (last === null) return "未知";
+  if (last <= 0) return "从未对时";
+  if (last < TIME_VALID_EPOCH) return "未知（时间未同步）";
+  return fmtLocalDateTime(last, deviceTzMinutes());
+}
+
+function formatUptime(value) {
+  var seconds = parseInteger(value);
+  if (seconds === null || seconds < 0) return "未知";
+  var days = Math.floor(seconds / 86400);
+  var rest = seconds % 86400;
+  var text = pad2(Math.floor(rest / 3600)) + ":" + pad2(Math.floor((rest % 3600) / 60)) + ":" + pad2(rest % 60);
+  return days > 0 ? (days + " 天 " + text) : text;
+}
+
+function addDeviceLine(key, value, badValue) {
+  var line = document.createElement("div");
+  line.className = "dline";
+  var keyEl = document.createElement("span");
+  keyEl.className = "k";
+  keyEl.textContent = key;
+  var valueEl = document.createElement("span");
+  valueEl.className = "v" + (badValue ? " bad" : "");
+  valueEl.textContent = value;
+  line.appendChild(keyEl);
+  line.appendChild(valueEl);
+  deviceInfo.appendChild(line);
+  return valueEl;
+}
+
+function currentWifiSsid() {
+  var current = wifiState.current;
+  if (current && typeof current.ssid === "string" && current.ssid.trim()) return current.ssid.trim();
+  var device = state.device;
+  if (device && typeof device.ssid === "string" && device.ssid.trim()) return device.ssid.trim();
+  return "";
+}
+
+function renderNetwork() {
+  var current = wifiState.current || {};
+  var device = state.device;
+  var wifiSsid = typeof current.ssid === "string" ? current.ssid.trim() : "";
+  var deviceSsid = device && typeof device.ssid === "string" ? device.ssid.trim() : "";
+  var wifiIp = current.ip ? String(current.ip).trim() : "";
+  var deviceIp = device && device.ip ? String(device.ip).trim() : "";
+  netSsid.textContent = deviceSsid || wifiSsid || "未连接/未知";
+  netIp.textContent = deviceIp || wifiIp || "未知";
+  wifiFallbackSsid.readOnly = true;
+  wifiFallbackSsid.value = currentWifiSsid() || "未连接/未知";
+}
+
+function isCurrentWifi(ssid) {
+  var current = wifiState.current;
+  return !!(ssid && current && typeof current.ssid === "string" &&
+      current.ssid.trim() === ssid && current.wifi !== false);
+}
+
+function renderDevice(errMsg) {
+  deviceInfo.innerHTML = "";
+  deviceInfo.style.display = "block";
+  deviceRefs.localTime = null;
+  deviceRefs.lastSync = null;
+  deviceRefs.tz = null;
+
+  var bad = !!errMsg;
+  if (state.device) {
+    var device = state.device;
+    var valid = deviceClockValid();
+    addDeviceLine("IP 地址", device.ip ? String(device.ip) : "未知");
+    addDeviceLine("WiFi 名称", (typeof device.ssid === "string" && device.ssid.trim()) ? device.ssid.trim() : "未连接/未知");
+    addDeviceLine("网络状态", device.wifi ? "已连接" : "未连接 / 未知");
+    addDeviceLine("时间有效性", valid ? "有效" : "未同步（屏幕显示 --:--:--）", !valid);
+    deviceRefs.localTime = addDeviceLine("设备本地时间", deviceLocalTimeText(), !valid);
+    deviceRefs.tz = addDeviceLine("时区", fmtUtcOffset(deviceTzMinutes()) +
+        "（tzOffsetMinutes=" + deviceTzMinutes() + "）");
+    addDeviceLine("最近对时", lastSyncText(device));
+    addDeviceLine("运行时长", formatUptime(device.uptimeSec));
+    if (!valid) bad = true;
+  } else {
+    addDeviceLine("提示", errMsg || "暂无设备信息");
+  }
+  deviceInfo.className = bad ? "bad" : "";
+  renderNetwork();
+}
+
+function updateDeviceClockUI() {
+  if (!deviceRefs.localTime) return;
+  var text = deviceLocalTimeText();
+  if (deviceRefs.localTime.textContent !== text) deviceRefs.localTime.textContent = text;
+}
+
+/* ------------------------------ 目标行 ------------------------------ */
+function safeSetInputValue(input, value) {
+  if (!value || input.value === value) return;
+  var previous = input.value;
+  try { input.value = value; } catch (e) { /* 忽略 */ }
+  if (!input.value) input.value = previous; /* 浏览器不支持秒时保留原值 */
+}
+
+function noteKey(target) {
+  return noteKeyFor(target);
+}
+
+function persistNote(target) {
+  var key = noteKey(target);
+  target._noteKey = key;
+  if (!key) return;
+  if (target._note) notes[key] = target._note;
+  else delete notes[key];
+  saveNotes();
+}
+
+function syncNoteKey(target, noteInput) {
+  var newKey = noteKey(target);
+  if (target._noteKey === newKey) return;
+  var value = noteInput ? noteInput.value : (target._note || "");
+  if (newKey && value) notes[newKey] = value;
+  if (target._noteKey && target._noteKey !== newKey && !noteKeyInUse(target._noteKey, target)) {
+    delete notes[target._noteKey];
+  }
+  target._note = value;
+  target._noteKey = newKey;
+  saveNotes();
+}
+
+function updateRowValidation(refs) {
+  var target = refs.target;
+  var validDate = !!normalizeDateInput(target.date);
+  var validTime = !!normalizeTimeInput(target.time);
+  var show = state.showErrors || target._touched;
+  var dateClass = (show && !validDate) ? "invalid-t" : "";
+  var timeClass = (show && !validTime) ? "invalid-t" : "";
+  if (refs.dateInput.className !== dateClass) refs.dateInput.className = dateClass;
+  if (refs.timeInput.className !== timeClass) refs.timeInput.className = timeClass;
+  var rowClass = "target-row" + (target.enabled === false ? " off" : "") +
+      ((show && (!validDate || !validTime)) ? " has-error" : "");
+  if (refs.row.className !== rowClass) refs.row.className = rowClass;
+}
+
+function updateTargetBadges(force) {
+  var tz = state.config.tzOffsetMinutes;
+  var now = browserEpoch();
+  var entries = [];
+
+  state.config.targets.forEach(function (target, index) {
+    var epoch = dateTimeToEpoch(target.date, target.time, tz);
+    if (target.enabled !== false && epoch !== null) {
+      entries.push({ index: index, epoch: epoch });
+    }
+  });
+  entries.sort(function (a, b) { return a.epoch - b.epoch || a.index - b.index; });
+
+  var activeIndex = -1;
+  for (var i = 0; i < entries.length; i++) {
+    if (entries[i].epoch >= now) { activeIndex = entries[i].index; break; }
+  }
+
+  targetRows.forEach(function (refs) {
+    var target = refs.target;
+    var epoch = dateTimeToEpoch(target.date, target.time, tz);
+    var date = normalizeDateInput(target.date);
+    var time = normalizeTimeInput(target.time);
+    var text;
+    var badgeClass;
+    var sub;
+    var subWarn = false;
+
+    if (target.enabled === false) {
+      text = "已停用";
+      badgeClass = "badge-off";
+      sub = "已停用，不参与倒计时";
+    } else if (epoch === null) {
+      text = (!date || !time) ? "待填写" : "无效";
+      badgeClass = "badge-invalid";
+      sub = "日期或时间无效，保存前请修正（YYYY-MM-DD / HH:MM:SS）";
+    } else if (epoch < now) {
+      text = "已过期";
+      badgeClass = "badge-expired";
+      sub = "目标 " + date + " " + time + " · 已过期 " + fmtDuration(now - epoch) + " 前";
+    } else if (state.config.targets.indexOf(target) === activeIndex) {
+      var label = "目标 " + date + " " + time + " · 剩余 " + fmtDuration(epoch - now);
+      var warn = state.config.warnSeconds > 0 && (epoch - now) <= state.config.warnSeconds;
+      if (warn) {
+        text = "进行中";
+        badgeClass = "badge-warn";
+        label += " · 预警";
+        subWarn = true;
+      } else {
+        text = "进行中";
+        badgeClass = "badge-active";
+      }
+      sub = label;
+    } else {
+      text = "等待中";
+      badgeClass = "badge-wait";
+      sub = "目标 " + date + " " + time + " · 后续目标";
+    }
+
+    var badgeClassName = "badge " + badgeClass;
+    if (force || refs._lastBadge !== badgeClassName) {
+      refs.badge.className = badgeClassName;
+      refs._lastBadge = badgeClassName;
+    }
+    if (force || refs._lastBadgeText !== text) {
+      refs.badge.textContent = text;
+      refs._lastBadgeText = text;
+    }
+    if (force || refs._lastSub !== sub) {
+      refs.sub.textContent = sub;
+      refs.sub.className = "target-sub" + (subWarn ? " warn" : "");
+      refs._lastSub = sub;
+    }
+    updateRowValidation(refs);
+  });
+}
+
+function commitTarget(refs) {
+  var target = refs.target;
+  var date = normalizeDateInput(target.date);
+  var time = normalizeTimeInput(target.time);
+  if (date) {
+    target.date = date;
+    safeSetInputValue(refs.dateInput, date);
+  }
+  if (time) {
+    target.time = time;
+    safeSetInputValue(refs.timeInput, time);
+  }
+  syncNoteKey(target, refs.noteInput);
+  updateTargetBadges(true);
+  updateDirty();
+}
+
+function renderTargets() {
+  targetList.innerHTML = "";
+  targetRows = [];
+
+  state.config.targets.forEach(function (target, index) {
+    if (typeof target._note !== "string") target._note = "";
+    if (typeof target._noteKey !== "string") target._noteKey = noteKey(target);
+    if (typeof target._touched !== "boolean") target._touched = false;
+
+    var row = document.createElement("div");
+    row.className = "target-row" + (target.enabled === false ? " off" : "");
+    row.dataset.index = String(index);
+
+    var head = document.createElement("div");
+    head.className = "target-head";
+
+    var sw = document.createElement("label");
+    sw.className = "switch";
+    var checkbox = document.createElement("input");
+    checkbox.type = "checkbox";
+    checkbox.checked = target.enabled !== false;
+    checkbox.addEventListener("change", function () {
+      target.enabled = checkbox.checked;
+      updateTargetBadges(true);
+      updateDirty();
+    });
+    var track = document.createElement("span");
+    track.className = "track";
+    sw.appendChild(checkbox);
+    sw.appendChild(track);
+
+    var badge = document.createElement("span");
+    badge.className = "badge badge-wait";
+    badge.textContent = "等待中";
+
+    var spacer = document.createElement("span");
+    spacer.className = "grow";
+
+    var upBtn = document.createElement("button");
+    upBtn.type = "button";
+    upBtn.className = "icon-btn";
+    upBtn.textContent = "↑";
+    upBtn.title = "上移";
+    upBtn.disabled = index === 0;
+    upBtn.addEventListener("click", function () { moveTarget(target, -1); });
+
+    var downBtn = document.createElement("button");
+    downBtn.type = "button";
+    downBtn.className = "icon-btn";
+    downBtn.textContent = "↓";
+    downBtn.title = "下移";
+    downBtn.disabled = index === state.config.targets.length - 1;
+    downBtn.addEventListener("click", function () { moveTarget(target, 1); });
+
+    var delBtn = document.createElement("button");
+    delBtn.type = "button";
+    delBtn.className = "icon-btn p-del";
+    delBtn.textContent = "✕";
+    delBtn.title = "删除";
+    delBtn.addEventListener("click", function () { removeTarget(target); });
+
+    head.appendChild(sw);
+    head.appendChild(badge);
+    head.appendChild(spacer);
+    head.appendChild(upBtn);
+    head.appendChild(downBtn);
+    head.appendChild(delBtn);
+
+    var fields = document.createElement("div");
+    fields.className = "target-fields";
+
+    var dateWrap = document.createElement("div");
+    dateWrap.className = "target-field date-field";
+    var dateLabel = document.createElement("span");
+    dateLabel.className = "field-mini";
+    dateLabel.textContent = "日期 YYYY-MM-DD";
+    var dateInput = document.createElement("input");
+    dateInput.type = "date";
+    dateInput.min = "2000-01-01";
+    dateInput.max = "2099-12-31";
+    dateInput.value = target.date || "";
+    dateInput.addEventListener("input", function () {
+      target.date = dateInput.value;
+      target._touched = true;
+      updateTargetBadges(true);
+      updateDirty();
+    });
+    dateInput.addEventListener("change", function () {
+      target.date = dateInput.value;
+      target._touched = true;
+      commitTarget(refs);
+    });
+    dateWrap.appendChild(dateLabel);
+    dateWrap.appendChild(dateInput);
+
+    var timeWrap = document.createElement("div");
+    timeWrap.className = "target-field time-field";
+    var timeLabel = document.createElement("span");
+    timeLabel.className = "field-mini";
+    timeLabel.textContent = "时间 HH:MM:SS";
+    var timeInput = document.createElement("input");
+    timeInput.type = "time";
+    timeInput.step = "1";
+    timeInput.title = "HH:MM:SS（含秒）";
+    timeInput.value = target.time || "";
+    timeInput.addEventListener("input", function () {
+      target.time = timeInput.value;
+      target._touched = true;
+      updateTargetBadges(true);
+      updateDirty();
+    });
+    timeInput.addEventListener("change", function () {
+      target.time = timeInput.value;
+      target._touched = true;
+      commitTarget(refs);
+    });
+    timeWrap.appendChild(timeLabel);
+    timeWrap.appendChild(timeInput);
+
+    fields.appendChild(dateWrap);
+    fields.appendChild(timeWrap);
+
+    var noteInput = document.createElement("input");
+    noteInput.type = "text";
+    noteInput.className = "note-input";
+    noteInput.maxLength = 40;
+    noteInput.placeholder = "本地备注（仅本浏览器保存，不提交）";
+    noteInput.value = target._note || "";
+    noteInput.addEventListener("input", function () {
+      target._note = noteInput.value;
+      persistNote(target);
+    });
+
+    var sub = document.createElement("div");
+    sub.className = "target-sub";
+
+    row.appendChild(head);
+    row.appendChild(fields);
+    row.appendChild(noteInput);
+    row.appendChild(sub);
+    targetList.appendChild(row);
+
+    var refs = {
+      target: target,
+      row: row,
+      badge: badge,
+      sub: sub,
+      dateInput: dateInput,
+      timeInput: timeInput,
+      noteInput: noteInput,
+      checkbox: checkbox,
+      upBtn: upBtn,
+      downBtn: downBtn
+    };
+    targetRows.push(refs);
+  });
+
+  addTargetBtn.disabled = state.config.targets.length >= MAX_TARGETS;
+  removeExpiredBtn.disabled = state.config.targets.length === 0;
+  updateTargetBadges(true);
+}
+
+function addTarget() {
+  if (state.config.targets.length >= MAX_TARGETS) return;
+  state.config.targets.push({
+    date: "",
+    time: "",
+    enabled: true,
+    _note: "",
+    _noteKey: "",
+    _touched: false
+  });
+  renderTargets();
+  updateDirty();
+  var last = targetRows[targetRows.length - 1];
+  if (last && last.dateInput && last.dateInput.focus) last.dateInput.focus();
+}
+
+function moveTarget(target, delta) {
+  var index = state.config.targets.indexOf(target);
+  var next = index + delta;
+  if (index < 0 || next < 0 || next >= state.config.targets.length) return;
+  var arr = state.config.targets;
+  var swap = arr[index];
+  arr[index] = arr[next];
+  arr[next] = swap;
+  renderTargets();
+  updateDirty();
+}
+
+function removeTarget(target) {
+  var index = state.config.targets.indexOf(target);
+  if (index < 0) return;
+  state.config.targets.splice(index, 1);
+  if (target._noteKey && !noteKeyInUse(target._noteKey, target)) {
+    delete notes[target._noteKey];
+    saveNotes();
+  }
+  renderTargets();
+  updateDirty();
+}
+
+function removeExpiredTargets() {
+  var now = browserEpoch();
+  var tz = state.config.tzOffsetMinutes;
+  var kept = [];
+  var removed = 0;
+  state.config.targets.forEach(function (target) {
+    var epoch = dateTimeToEpoch(target.date, target.time, tz);
+    if (epoch !== null && epoch < now) {
+      removed++;
+      return;
+    }
+    kept.push(target);
+  });
+  if (!removed) {
+    addStatus("info", "没有已过期的目标");
+    return;
+  }
+  state.config.targets = kept;
+  renderTargets();
+  updateDirty();
+  addStatus("ok", "已移除 " + removed + " 个已过期目标");
+}
+
+/* ------------------------------ 页面模型 / 页面列表 ------------------------------ */
+var pageSwitching = false;
+
+function pageById(id) {
+  var pages = state.config.pages || [];
+  for (var i = 0; i < pages.length; i++) {
+    if (pages[i].id === id) return pages[i];
+  }
+  return null;
+}
+
+function selectedPage() {
+  var page = pageById(state.selectedPageId);
+  if (page) return page;
+  return state.config.pages && state.config.pages.length ? state.config.pages[0] : null;
+}
+
+function pageIndex(page) {
+  return (state.config.pages || []).indexOf(page);
+}
+
+function pageTitleText(page) {
+  if (!page) return "页面";
+  var title = String(page.title || "").trim();
+  return title || PAGE_TYPE_LABELS[page.type] || "页面";
+}
+
+function pageShortTitleText(page) {
+  var shortTitle = String(page && page.shortTitle || "").trim();
+  return shortTitle || PAGE_TYPE_SHORT[page && page.type] || "PAGE";
+}
+
+function updatePageRowTitle(page) {
+  var refs = pageRowRefs[page.id];
+  if (!refs) return;
+  refs.titleEl.textContent = pageTitleText(page);
+  refs.typeEl.textContent = PAGE_TYPE_LABELS[page.type] || page.type;
+}
+
+function renderPageList() {
+  pageList.innerHTML = "";
+  pageRowRefs = {};
+  var pages = state.config.pages || [];
+
+  pages.forEach(function (page, index) {
+    var row = document.createElement("div");
+    row.className = "page-row" + (page.id === state.selectedPageId ? " selected" : "") +
+        (page.enabled === false ? " off" : "");
+    row.dataset.pageId = page.id;
+
+    var head = document.createElement("div");
+    head.className = "page-row-head";
+
+    var seq = document.createElement("span");
+    seq.className = "page-seq";
+    seq.textContent = "第 " + (index + 1) + " 页";
+
+    var titleEl = document.createElement("span");
+    titleEl.className = "page-title";
+    titleEl.textContent = pageTitleText(page);
+
+    var typeEl = document.createElement("span");
+    typeEl.className = "badge page-type";
+    typeEl.textContent = PAGE_TYPE_LABELS[page.type] || page.type;
+
+    var shortEl = document.createElement("span");
+    shortEl.className = "badge badge-soft page-short";
+    shortEl.textContent = pageShortTitleText(page);
+
+    head.appendChild(seq);
+    head.appendChild(titleEl);
+    head.appendChild(typeEl);
+    head.appendChild(shortEl);
+
+    var defaultEl = null;
+    var currentEl = null;
+    var offEl = null;
+    if (page.id === state.config.defaultPageId) {
+      defaultEl = document.createElement("span");
+      defaultEl.className = "badge badge-wait";
+      defaultEl.textContent = "默认";
+      head.appendChild(defaultEl);
+    }
+    if (page.id === state.devicePageId) {
+      currentEl = document.createElement("span");
+      currentEl.className = "badge badge-active";
+      currentEl.textContent = "当前";
+      head.appendChild(currentEl);
+    }
+    if (page.enabled === false) {
+      offEl = document.createElement("span");
+      offEl.className = "badge badge-off";
+      offEl.textContent = "停用";
+      head.appendChild(offEl);
+    }
+
+    var actions = document.createElement("div");
+    actions.className = "page-actions";
+
+    var editBtn = document.createElement("button");
+    editBtn.type = "button";
+    editBtn.textContent = "编辑";
+    editBtn.title = "编辑此页";
+    editBtn.addEventListener("click", function () {
+      selectPage(page.id);
+      if (pageTitle.focus) pageTitle.focus();
+    });
+
+    var upBtn = document.createElement("button");
+    upBtn.type = "button";
+    upBtn.textContent = "↑";
+    upBtn.title = "上移";
+    upBtn.disabled = index === 0;
+    upBtn.addEventListener("click", function () { movePage(page, -1); });
+
+    var downBtn = document.createElement("button");
+    downBtn.type = "button";
+    downBtn.textContent = "↓";
+    downBtn.title = "下移";
+    downBtn.disabled = index === pages.length - 1;
+    downBtn.addEventListener("click", function () { movePage(page, 1); });
+
+    var delBtn = document.createElement("button");
+    delBtn.type = "button";
+    delBtn.className = "danger";
+    delBtn.textContent = "✕";
+    delBtn.title = "删除此页";
+    delBtn.disabled = pages.length <= 1;
+    delBtn.addEventListener("click", function () { deletePage(page); });
+
+    actions.appendChild(editBtn);
+    actions.appendChild(upBtn);
+    actions.appendChild(downBtn);
+    actions.appendChild(delBtn);
+    row.appendChild(head);
+    row.appendChild(actions);
+    pageList.appendChild(row);
+
+    pageRowRefs[page.id] = {
+      row: row,
+      titleEl: titleEl,
+      typeEl: typeEl,
+      defaultEl: defaultEl,
+      currentEl: currentEl,
+      offEl: offEl
+    };
+  });
+
+  pageCount.textContent = pages.length + "/" + MAX_PAGES;
+  addPageBtn.disabled = pages.length >= MAX_PAGES || state.legacy;
+  pageHint.textContent = pages.length >= MAX_PAGES
+    ? "已达 12 页上限；删除一页后才能继续新增。"
+    : "最多 12 页；列表顺序即旋钮顺序，停用页会被跳过。直播页固定上下 2 个槽位。";
+}
+
+function renderSimPageOptions() {
+  simPageSelect.innerHTML = "";
+  var pages = state.config.pages || [];
+  pages.forEach(function (page, index) {
+    var option = document.createElement("option");
+    option.value = page.id;
+    option.textContent = (index + 1) + ". " + pageTitleText(page) +
+        "（" + (PAGE_TYPE_LABELS[page.type] || page.type) + "）";
+    simPageSelect.appendChild(option);
+  });
+  var selected = selectedPage();
+  simPageSelect.value = selected ? selected.id : "";
+  simPageSelect.disabled = pages.length === 0;
+  simLiveState.disabled = !selected || selected.type !== "live";
+  simLiveState.value = state.livePreview;
+}
+
+function renderPages() {
+  renderPageList();
+  renderPageEditor();
+  renderSimPageOptions();
+}
+
+function updatePageEditorButtons() {
+  var page = selectedPage();
+  var existsOnDevice = !!(page && state.devicePageIds[page.id]);
+  if (setCurrentPageBtn) {
+    setCurrentPageBtn.disabled = !page || busy || pageSwitching || state.legacy || !existsOnDevice;
+    setCurrentPageBtn.title = existsOnDevice
+      ? "切换设备当前页（不保存配置）"
+      : "新页面尚未保存到设备，先保存再切换";
+  }
+  addPageBtn.disabled = (state.config.pages || []).length >= MAX_PAGES || state.legacy;
+}
+
+function renderPageEditor() {
+  var page = selectedPage();
+  if (!page) return;
+  if (state.selectedPageId !== page.id) state.selectedPageId = page.id;
+
+  pageTitle.value = page.title || "";
+  pageShortTitle.value = page.shortTitle || "";
+  pageType.value = PAGE_TYPE_LABELS[page.type] ? page.type : "clock";
+  pageEnabled.checked = page.enabled !== false;
+  defaultPageChk.checked = page.id === state.config.defaultPageId;
+  pageTitle.className = "";
+  pageShortTitle.className = "";
+  pageTitleError.textContent = "";
+  pageShortTitleError.textContent = "";
+
+  pageTypeHint.textContent = page.type === "live"
+    ? "直播页固定上下 2 个槽位（每行 8px）；空槽显示 --。"
+    : "屏幕不显示页面标题（LED 仅 TomThumb 可打印 ASCII）；短名用于切页横幅。";
+
+  if (page.type === "live") {
+    liveEditor.style.display = "block";
+    livePageMetric.value = LIVE_METRICS.indexOf(page.metric) >= 0 ? page.metric : "online";
+    renderLiveRows();
+  } else {
+    liveEditor.style.display = "none";
+    liveRows.innerHTML = "";
+    liveRowRefs = [];
+  }
+  updatePageEditorButtons();
+}
+
+function selectPage(id) {
+  var page = pageById(id);
+  if (!page) return false;
+  state.selectedPageId = page.id;
+  renderPageList();
+  renderPageEditor();
+  renderSimPageOptions();
+  drawCurrentFrame(true);
+  return true;
+}
+
+function setDefaultPage(id) {
+  if (!pageById(id)) return;
+  state.config.defaultPageId = id;
+  var currentPage = selectedPage();
+  defaultPageChk.checked = !!(currentPage && id === currentPage.id);
+  renderPageList();
+  updateDirty();
+}
+
+function addPage() {
+  if ((state.config.pages || []).length >= MAX_PAGES) return;
+  var used = {};
+  state.config.pages.forEach(function (page) { used[page.id] = true; });
+  var page = {
+    id: generatePageId(used),
+    type: "clock",
+    title: "新页面",
+    shortTitle: "",
+    enabled: true
+  };
+  state.config.pages.push(page);
+  state.selectedPageId = page.id;
+  renderPages();
+  updateDirty();
+  addStatus("info", "已新增页面（第 " + state.config.pages.length + " 页），保存后生效");
+  if (pageTitle.focus) pageTitle.focus();
+}
+
+function configuredRoomCount(page) {
+  if (!page || page.type !== "live" || !Array.isArray(page.rooms)) return 0;
+  return page.rooms.filter(function (room) {
+    return String(room.room || "").trim() || String(room.label || "").trim();
+  }).length;
+}
+
+function deletePage(page) {
+  var pages = state.config.pages || [];
+  if (pages.length <= 1) return;
+  var index = pages.indexOf(page);
+  if (index < 0) return;
+  var count = configuredRoomCount(page);
+  if (count > 0) {
+    var ok = window.confirm("该页有 " + count + " 个直播间配置，删除后不可恢复。继续？");
+    if (!ok) return;
+  }
+  pages.splice(index, 1);
+  if (state.config.defaultPageId === page.id) {
+    state.config.defaultPageId = (pages[index] || pages[index - 1] || pages[0]).id;
+  }
+  if (state.selectedPageId === page.id) {
+    state.selectedPageId = (pages[index] || pages[index - 1] || pages[0]).id;
+  }
+  renderPages();
+  updateDirty();
+  addStatus("info", "已删除页面：" + pageTitleText(page));
+}
+
+function movePage(page, delta) {
+  var pages = state.config.pages || [];
+  var index = pages.indexOf(page);
+  var next = index + delta;
+  if (index < 0 || next < 0 || next >= pages.length) return;
+  var swap = pages[index];
+  pages[index] = pages[next];
+  pages[next] = swap;
+  renderPages();
+  updateDirty();
+}
+
+function changePageType(newType) {
+  var page = selectedPage();
+  if (!page || PAGE_TYPES.indexOf(newType) < 0) return false;
+  if (newType === page.type) return true;
+  if (page.type === "live" && newType !== "live") {
+    var count = configuredRoomCount(page);
+    if (count > 0) {
+      var ok = window.confirm("该页的 " + MAX_ROOMS + " 个直播间配置将不再保存。继续？");
+      if (!ok) {
+        pageType.value = page.type;
+        return false;
+      }
+    }
+  }
+  page.type = newType;
+  if (newType === "live") {
+    if (!Array.isArray(page.rooms) || !page.rooms.length) page.rooms = defaultRooms();
+    while (page.rooms.length < MAX_ROOMS) {
+      page.rooms.push({ platform: "bilibili", room: "", label: "", enabled: false, metric: "" });
+    }
+    page.rooms = page.rooms.slice(0, MAX_ROOMS);
+    if (LIVE_METRICS.indexOf(page.metric) < 0) page.metric = "online";
+  }
+  renderPages();
+  updateDirty();
+  return true;
+}
+
+function setCurrentPage() {
+  var page = selectedPage();
+  if (!page || busy || pageSwitching) return;
+  if (!state.devicePageIds[page.id]) {
+    addStatus("info", "该页尚未保存到设备，先保存配置再切换", pageTitleText(page));
+    return;
+  }
+  pageSwitching = true;
+  updatePageEditorButtons();
+  api("POST", "/api/page", { id: page.id }).then(function (response) {
+    if (!(response && response.status >= 200 && response.status < 300 &&
+        response.data && response.data.ok)) {
+      addStatus("err", "切换当前页失败", fullResponse(response));
+      return false;
+    }
+    var pageInfo = response.data.page && typeof response.data.page === "object" ? response.data.page : {};
+    state.devicePageId = typeof pageInfo.id === "string" ? pageInfo.id : page.id;
+    renderPageList();
+    addStatus("ok", "设备当前页已切换为：" + pageTitleText(page));
+    return true;
+  }).catch(function (error) {
+    addStatus("err", "切换当前页失败：网络错误", errorText(error));
+    return false;
+  }).then(function () {
+    pageSwitching = false;
+    updatePageEditorButtons();
+  });
+}
+
+/* ------------------------------ 直播槽位 ------------------------------ */
+function updateRoomInputAttrs(refs, platform) {
+  var rule = roomRule(platform);
+  refs.roomInput.maxLength = 40;
+  refs.roomInput.placeholder = rule.placeholder;
+  refs.roomInput.setAttribute("inputmode", rule.inputmode);
+  refs.roomInput.setAttribute("autocapitalize", platform === "kuaishou" ? "none" : "off");
+}
+
+function fillMetricSelect(select, page, row) {
+  select.innerHTML = "";
+  var follow = document.createElement("option");
+  follow.value = "";
+  follow.textContent = "跟随页默认（" + metricLabel(page.metric, row.platform) + "）";
+  select.appendChild(follow);
+  metricOptionsFor(row.platform).forEach(function (metric) {
+    var option = document.createElement("option");
+    option.value = metric;
+    option.textContent = metricLabel(metric, row.platform);
+    select.appendChild(option);
+  });
+  select.value = row.metric && metricOptionsFor(row.platform).indexOf(row.metric) >= 0
+    ? row.metric : "";
+}
+
+function fallbackMetric(row, oldMetric) {
+  var options = metricOptionsFor(row.platform);
+  if (oldMetric && options.indexOf(oldMetric) < 0) {
+    row.metric = options[0] || "";
+    row._metricNote = "该平台不支持“" + LIVE_METRIC_LABELS[oldMetric] + "”，已切换为“" +
+        metricLabel(row.metric, row.platform) + "”";
+  } else if (oldMetric) {
+    row.metric = oldMetric;
+  }
+}
+
+function duplicateRoomMap(page) {
+  var map = {};
+  if (!page || page.type !== "live" || !Array.isArray(page.rooms)) return map;
+  page.rooms.forEach(function (room, index) {
+    if (room.enabled !== true) return;
+    var value = String(room.room || "").trim();
+    if (!value || !roomFormatOk(room.platform, value)) return;
+    var key = room.platform + ":" + value;
+    if (!map[key]) map[key] = [];
+    map[key].push(index);
+  });
+  return map;
+}
+
+function crossPageDuplicate(page, row) {
+  var value = String(row.room || "").trim();
+  if (!value || !roomFormatOk(row.platform, value)) return null;
+  var pages = state.config.pages || [];
+  for (var i = 0; i < pages.length; i++) {
+    var other = pages[i];
+    if (other.id === page.id || other.type !== "live" || !Array.isArray(other.rooms)) continue;
+    for (var j = 0; j < other.rooms.length; j++) {
+      var room = other.rooms[j];
+      if (room.enabled === true && room.platform === row.platform &&
+          String(room.room || "").trim() === value) {
+        return { pageIndex: i, page: other, rowIndex: j };
+      }
+    }
+  }
+  return null;
+}
+
+/* 只标记当前选中页的 DOM；errors 覆盖所有页。 */
+function validateLiveRows(page) {
+  var errors = [];
+  if (!page || page.type !== "live") return errors;
+  var index = -1;
+  (state.config.pages || []).forEach(function (item, i) {
+    if (item.id === page.id) index = i;
+  });
+  if (index < 0) index = 0;
+  var pageNo = index + 1;
+  var rooms = Array.isArray(page.rooms) ? page.rooms : [];
+  if (rooms.length < 1 || rooms.length > MAX_ROOMS) {
+    errors.push("第 " + pageNo + " 页直播槽位必须为 1.." + MAX_ROOMS + " 个");
+  }
+
+  var duplicateMap = duplicateRoomMap(page);
+  var isSelected = page.id === state.selectedPageId;
+
+  rooms.forEach(function (room, rowIndex) {
+    var refs = isSelected ? liveRowRefs[rowIndex] : null;
+    var value = String(room.room || "").trim();
+    var rule = roomRule(room.platform);
+    var enabled = room.enabled === true;
+    var formatOk = roomFormatOk(room.platform, value);
+    var lengthOk = roomLengthOk(value);
+    var dup = false;
+    if (enabled && value && formatOk) {
+      var key = room.platform + ":" + value;
+      dup = duplicateMap[key] && duplicateMap[key].length > 1;
+    }
+    var cross = crossPageDuplicate(page, room);
+    var badgeText;
+    var badgeClass;
+    var hintClass = "hint live-hint";
+    var hints = [];
+
+    if (!enabled) {
+      badgeText = value ? "已停用" : "--";
+      badgeClass = "badge badge-off";
+      hints.push(rule.hint + "；已停用，不参与抓取。");
+    } else if (!value) {
+      badgeText = "--";
+      badgeClass = "badge badge-off";
+      hints.push("空槽：启用后必须填写房间号，否则保存会被拦截。");
+      errors.push("第 " + pageNo + " 页第 " + (rowIndex + 1) + " 个直播间：启用后必须填写房间号");
+    } else if (!lengthOk) {
+      badgeText = "过长";
+      badgeClass = "badge badge-invalid";
+      hints.push("房间号最长 40 字符。");
+      errors.push("第 " + pageNo + " 页第 " + (rowIndex + 1) + " 个直播间：房间号超过 40 字符");
+    } else if (!formatOk) {
+      badgeText = "格式错误";
+      badgeClass = "badge badge-invalid";
+      hints.push(rule.hint);
+      errors.push("第 " + pageNo + " 页第 " + (rowIndex + 1) + " 个直播间：房间号格式无效（" +
+          PLATFORM_LABELS[room.platform] + "）");
+    } else if (dup) {
+      badgeText = "重复";
+      badgeClass = "badge badge-invalid";
+      hints.push("同页启用行重复：同平台 + 同房间号。");
+    } else {
+      badgeText = "正常";
+      badgeClass = "badge badge-active";
+      hints.push(rule.hint);
+    }
+
+    if (dup) {
+      var firstRow = duplicateMap[room.platform + ":" + value][0];
+      if (firstRow !== rowIndex) {
+        errors.push("第 " + pageNo + " 页第 " + (rowIndex + 1) + " 个直播间与第 " +
+            (firstRow + 1) + " 个重复：" + room.platform + " " + value);
+      }
+    }
+    if (room.label && (!isPrintableAscii(room.label) || String(room.label).length > 3)) {
+      hints.push("label 只允许 ≤3 个可打印 ASCII 字符。");
+      errors.push("第 " + pageNo + " 页第 " + (rowIndex + 1) + " 个直播间：label 只允许 ≤3 个可打印 ASCII 字符");
+    }
+    if (cross) {
+      hints.push("该直播间已在第 " + (cross.pageIndex + 1) + " 页使用（共用抓取数据，不阻塞保存）。");
+    }
+    if (room._metricNote) hints.push(room._metricNote);
+
+    if (refs) {
+      refs.badge.textContent = badgeText;
+      refs.badge.className = badgeClass;
+      refs.row.className = "live-slot" + (enabled ? "" : " off") +
+          (badgeClass.indexOf("badge-invalid") >= 0 ? " has-error" : "");
+      refs.roomInput.className = "live-room-input" +
+          (badgeClass.indexOf("badge-invalid") >= 0 && value !== "" ? " invalid-t" : "");
+      if (enabled && !value) refs.roomInput.className = "live-room-input invalid-t";
+      refs.hint.textContent = hints.join(" ");
+      refs.hint.className = hintClass + (badgeClass.indexOf("badge-invalid") >= 0 ? " warn" : "");
+    }
+  });
+
+  return errors;
+}
+
+function renderLiveRows() {
+  liveRows.innerHTML = "";
+  liveRowRefs = [];
+  var page = selectedPage();
+  if (!page || page.type !== "live") return;
+  if (!Array.isArray(page.rooms)) page.rooms = defaultRooms();
+  while (page.rooms.length < MAX_ROOMS) {
+    page.rooms.push({
+      platform: page.rooms.length === 0 ? "bilibili" : "douyin",
+      room: "", label: "", enabled: false, metric: ""
+    });
+  }
+  page.rooms = page.rooms.slice(0, MAX_ROOMS);
+
+  page.rooms.forEach(function (room, index) {
+    if (PLATFORMS.indexOf(room.platform) < 0) room.platform = index === 0 ? "bilibili" : "douyin";
+    var slot = document.createElement("fieldset");
+    slot.className = "live-slot" + (room.enabled === true ? "" : " off");
+
+    var legend = document.createElement("legend");
+    legend.textContent = "直播间 " + (index + 1);
+    slot.appendChild(legend);
+
+    var head = document.createElement("div");
+    head.className = "live-slot-head";
+
+    var sw = document.createElement("label");
+    sw.className = "switch";
+    sw.title = "启用/停用此直播间";
+    var enabledChk = document.createElement("input");
+    enabledChk.type = "checkbox";
+    enabledChk.checked = room.enabled === true;
+    var track = document.createElement("span");
+    track.className = "track";
+    sw.appendChild(enabledChk);
+    sw.appendChild(track);
+
+    var name = document.createElement("span");
+    name.className = "slot-name";
+    name.textContent = "槽位 " + (index + 1) + " / " + MAX_ROOMS + " · 屏幕第 " + (index + 1) + " 行";
+
+    var badge = document.createElement("span");
+    badge.className = "badge badge-off";
+    badge.textContent = "--";
+
+    head.appendChild(sw);
+    head.appendChild(name);
+    head.appendChild(badge);
+
+    var fields = document.createElement("div");
+    fields.className = "live-fields";
+
+    var platformWrap = document.createElement("div");
+    platformWrap.className = "live-field";
+    var platformLabel = document.createElement("span");
+    platformLabel.className = "field-mini";
+    platformLabel.textContent = "平台";
+    var platformSel = document.createElement("select");
+    platformSel.setAttribute("aria-label", "直播间 " + (index + 1) + " 平台");
+    PLATFORMS.forEach(function (platform) {
+      var option = document.createElement("option");
+      option.value = platform;
+      option.textContent = PLATFORM_LABELS[platform];
+      platformSel.appendChild(option);
+    });
+    platformSel.value = room.platform;
+    platformWrap.appendChild(platformLabel);
+    platformWrap.appendChild(platformSel);
+
+    var metricWrap = document.createElement("div");
+    metricWrap.className = "live-field";
+    var metricLabelEl = document.createElement("span");
+    metricLabelEl.className = "field-mini";
+    metricLabelEl.textContent = "指标";
+    var metricSel = document.createElement("select");
+    metricSel.setAttribute("aria-label", "直播间 " + (index + 1) + " 指标");
+    metricWrap.appendChild(metricLabelEl);
+    metricWrap.appendChild(metricSel);
+    fillMetricSelect(metricSel, page, room);
+
+    var roomWrap = document.createElement("div");
+    roomWrap.className = "live-field full";
+    var roomLabel = document.createElement("span");
+    roomLabel.className = "field-mini";
+    roomLabel.textContent = "房间号（字符串，可粘贴分享链接）";
+    var roomInput = document.createElement("input");
+    roomInput.type = "text";
+    roomInput.className = "live-room-input";
+    roomInput.value = room.room || "";
+    roomInput.autocomplete = "off";
+    roomInput.setAttribute("autocapitalize", "none");
+    roomInput.setAttribute("spellcheck", "false");
+    roomInput.setAttribute("aria-label", "直播间 " + (index + 1) + " 房间号");
+    updateRoomInputAttrs({ roomInput: roomInput }, room.platform);
+    roomWrap.appendChild(roomLabel);
+    roomWrap.appendChild(roomInput);
+
+    var labelWrap = document.createElement("div");
+    labelWrap.className = "live-field full";
+    var labelLabel = document.createElement("span");
+    labelLabel.className = "field-mini";
+    labelLabel.textContent = "label（可选，≤3 ASCII，空则自动）";
+    var labelInput = document.createElement("input");
+    labelInput.type = "text";
+    labelInput.className = "live-label-input";
+    labelInput.maxLength = 3;
+    labelInput.value = room.label || "";
+    labelInput.placeholder = "自动，如 B25";
+    labelInput.autocomplete = "off";
+    labelInput.setAttribute("autocapitalize", "characters");
+    labelInput.setAttribute("aria-label", "直播间 " + (index + 1) + " label");
+    labelWrap.appendChild(labelLabel);
+    labelWrap.appendChild(labelInput);
+
+    fields.appendChild(platformWrap);
+    fields.appendChild(metricWrap);
+    fields.appendChild(roomWrap);
+    fields.appendChild(labelWrap);
+
+    var hint = document.createElement("p");
+    hint.className = "hint live-hint";
+
+    slot.appendChild(head);
+    slot.appendChild(fields);
+    slot.appendChild(hint);
+    liveRows.appendChild(slot);
+
+    var refs = {
+      page: page,
+      room: room,
+      index: index,
+      row: slot,
+      badge: badge,
+      hint: hint,
+      platformSel: platformSel,
+      metricSel: metricSel,
+      roomInput: roomInput,
+      labelInput: labelInput,
+      enabledChk: enabledChk
+    };
+    liveRowRefs.push(refs);
+
+    enabledChk.addEventListener("change", function () {
+      room.enabled = enabledChk.checked;
+      validateLiveRows(page);
+      updateDirty();
+    });
+
+    platformSel.addEventListener("change", function () {
+      var oldMetric = room.metric;
+      room.platform = platformSel.value;
+      fallbackMetric(room, oldMetric);
+      updateRoomInputAttrs(refs, room.platform);
+      fillMetricSelect(metricSel, page, room);
+      validateLiveRows(page);
+      updateDirty();
+    });
+
+    metricSel.addEventListener("change", function () {
+      room.metric = metricSel.value;
+      room._metricNote = "";
+      validateLiveRows(page);
+      updateDirty();
+    });
+
+    roomInput.addEventListener("input", function () {
+      room.room = roomInput.value;
+      validateLiveRows(page);
+      updateDirty();
+    });
+
+    roomInput.addEventListener("change", function () {
+      var normalized = sanitizeRoomInput(room.platform, roomInput.value);
+      if (normalized && normalized !== roomInput.value) {
+        roomInput.value = normalized;
+        room.room = normalized;
+      }
+      validateLiveRows(page);
+      updateDirty();
+    });
+
+    roomInput.addEventListener("paste", function (event) {
+      var text = "";
+      try {
+        text = event && event.clipboardData ? event.clipboardData.getData("text") : "";
+      } catch (e) { text = ""; }
+      if (!text) return;
+      var parsed = parseRoomLink(room.platform, text);
+      if (parsed.ok) {
+        if (event.preventDefault) event.preventDefault();
+        roomInput.value = parsed.value;
+        room.room = parsed.value;
+        validateLiveRows(page);
+        updateDirty();
+      }
+    });
+
+    labelInput.addEventListener("input", function () {
+      room.label = labelInput.value;
+      validateLiveRows(page);
+      updateDirty();
+    });
+  });
+
+  validateLiveRows(page);
+}
+
+/* ------------------------------ 直播数据源 ------------------------------ */
+function liveSourceHintText(live) {
+  var source = live.source;
+  var text;
+  if (source === "off") {
+    text = "关闭：直播页显示占位，不产生任何网络请求。";
+  } else if (source === "bridge") {
+    text = "B 站/抖音/快手都经中继；中继地址留空时 B 站仍会尝试设备直连，抖音/快手显示 --。";
+  } else if (source === "hybrid") {
+    text = "B 站由设备直连（镜像自带 OpenSSL），抖音/快手经中继；中继地址留空时抖音/快手显示 --。";
+  } else {
+    text = "推送模式：外部程序 POST /api/live 推送数据，设备不主动请求。";
+  }
+  var refresh = parseInteger(live.refreshSec);
+  var timeout = parseInteger(live.timeoutMs);
+  if (refresh !== null && timeout !== null) {
+    text += " 刷新 " + refresh + " 秒，超时 " + timeout + " 毫秒。";
+  }
+  return text;
+}
+
+function updateLiveSourceVisibility() {
+  var source = liveSource.value;
+  liveUrlRow.style.display = sourceNeedsUrl(source) ? "block" : "none";
+}
+
+function validateLiveSource(live, mark) {
+  var errors = [];
+  var sourceOk = LIVE_SOURCES.indexOf(live.source) >= 0;
+  if (!sourceOk) errors.push("直播数据源无效：需为 off/bridge/hybrid/push");
+
+  var url = String(live.url || "").trim();
+  var urlOk = true;
+  if (sourceNeedsUrl(live.source) && url) {
+    urlOk = /^http:\/\/\S+$/.test(url) && url.length <= 160;
+    if (!urlOk) errors.push("直播中继地址无效：只接受 http:// 开头、≤160 字符、无空格（可留空）");
+  } else if (url && sourceNeedsUrl(live.source)) {
+    urlOk = true;
+  }
+
+  var refresh = parseInteger(live.refreshSec);
+  var refreshOk = refresh !== null && refresh >= 15 && refresh <= 300;
+  if (!refreshOk) errors.push("直播刷新周期无效：需为 15..300 的整数秒");
+  var timeout = parseInteger(live.timeoutMs);
+  var timeoutOk = timeout !== null && timeout >= 1000 && timeout <= 5000;
+  if (!timeoutOk) errors.push("直播超时无效：需为 1000..5000 的整数毫秒");
+
+  if (mark) {
+    liveSource.className = sourceOk ? "" : "invalid-t";
+    liveUrl.className = (sourceNeedsUrl(live.source) && !urlOk) ? "invalid-t" : "";
+    liveRefresh.className = refreshOk ? "" : "invalid-t";
+    liveTimeout.className = timeoutOk ? "" : "invalid-t";
+    liveSourceHint.className = "hint" + (errors.length ? " warn" : "");
+    liveSourceHint.textContent = errors.length
+      ? (errors[0] + " " + liveSourceHintText(live))
+      : liveSourceHintText(live);
+  }
+  updateLiveSourceVisibility();
+  return errors;
+}
+
+function renderLiveSourceForm() {
+  var live = state.config.live || { source: "off", url: "", refreshSec: 30, timeoutMs: 3000 };
+  liveSource.value = LIVE_SOURCES.indexOf(live.source) >= 0 ? live.source : "off";
+  liveUrl.value = live.url || "";
+  liveRefresh.value = String(live.refreshSec);
+  liveTimeout.value = String(live.timeoutMs);
+  updateLiveSourceVisibility();
+  validateLiveSource(live, true);
+}
+
+/* ------------------------------ 表单读取 / 校验 ------------------------------ */
+function pageTitleValidation(title) {
+  var errors = [];
+  var text = String(title === null || title === undefined ? "" : title);
+  if (text.length > MAX_TITLE_CHARS) errors.push("超过 16 个字符");
+  if (utf8ByteLength(text) > MAX_TITLE_BYTES) errors.push("超过 48 个 UTF-8 字节");
+  if (!isControlFree(text)) errors.push("包含控制字符");
+  return errors;
+}
+
+function shortTitleValidation(shortTitle) {
+  var text = String(shortTitle === null || shortTitle === undefined ? "" : shortTitle);
+  var errors = [];
+  if (text.length > MAX_SHORT_TITLE) errors.push("超过 8 个字符");
+  if (!isPrintableAscii(text)) errors.push("含非可打印 ASCII 字符");
+  return errors;
+}
+
+function validatePageBasics(page, index) {
+  var errors = [];
+  var pageNo = index + 1;
+  if (!page || typeof page !== "object") {
+    return ["第 " + pageNo + " 页不是对象"];
+  }
+  if (!pageIdOk(page.id)) errors.push("第 " + pageNo + " 页 id 无效：需为 [a-z0-9_-]{1,8}");
+  if (PAGE_TYPES.indexOf(page.type) < 0) errors.push("第 " + pageNo + " 页类型无效：" + page.type);
+  pageTitleValidation(page.title).forEach(function (line) {
+    errors.push("第 " + pageNo + " 页标题" + line);
+  });
+  shortTitleValidation(page.shortTitle).forEach(function (line) {
+    errors.push("第 " + pageNo + " 页切页短名" + line);
+  });
+  if (page.type === "live") {
+    if (LIVE_METRICS.indexOf(page.metric) < 0) {
+      errors.push("第 " + pageNo + " 页默认指标无效：" + page.metric);
+    }
+    if (!Array.isArray(page.rooms) || page.rooms.length < 1 || page.rooms.length > MAX_ROOMS) {
+      errors.push("第 " + pageNo + " 页直播槽位必须为 1.." + MAX_ROOMS + " 个");
+    } else {
+      page.rooms.forEach(function (room, rowIndex) {
+        if (PLATFORMS.indexOf(room.platform) < 0) {
+          errors.push("第 " + pageNo + " 页第 " + (rowIndex + 1) + " 个直播间平台无效");
+        }
+        if (room.metric && LIVE_METRICS.indexOf(room.metric) < 0) {
+          errors.push("第 " + pageNo + " 页第 " + (rowIndex + 1) + " 个直播间指标无效");
+        }
+      });
+    }
+  }
+  return errors;
+}
+
+function markPageBasics(page) {
+  if (!page || page.id !== state.selectedPageId) return;
+  var titleErrors = pageTitleValidation(page.title);
+  pageTitle.className = titleErrors.length ? "invalid-t" : "";
+  pageTitleError.textContent = titleErrors.length ? titleErrors.join("；") : "";
+  var shortErrors = shortTitleValidation(page.shortTitle);
+  pageShortTitle.className = shortErrors.length ? "invalid-t" : "";
+  pageShortTitleError.textContent = shortErrors.length ? shortErrors.join("；") : "";
+}
+
+function focusFirstInvalid(list) {
+  for (var i = 0; i < list.length; i++) {
+    if (list[i] && list[i].focus) {
+      list[i].focus();
+      return;
+    }
+  }
+}
+
+function readFormState() {
+  var errors = [];
+  var firstInvalid = [];
+  var config = deepCopy(state.config);
+  config.version = 3;
+
+  var tz = parseInteger(tzMinutesInput.value);
+  var tzValid = tz !== null && tz >= TZ_MIN && tz <= TZ_MAX;
+  tzMinutesInput.className = tzValid ? "" : "invalid-t";
+  if (!tzValid) {
+    errors.push("时区偏移无效：需为 " + TZ_MIN + ".." + TZ_MAX + " 的整数分钟");
+    firstInvalid.push(tzMinutesInput);
+  } else {
+    config.tzOffsetMinutes = tz;
+  }
+
+  var warn = parseInteger(warnInput.value);
+  var warnValid = warn !== null && warn >= 0 && warn <= WARN_MAX;
+  warnInput.className = warnValid ? "" : "invalid-t";
+  if (!warnValid) {
+    errors.push("预警秒数无效：需为 0.." + WARN_MAX + " 的整数");
+    firstInvalid.push(warnInput);
+  } else {
+    config.warnSeconds = warn;
+  }
+
+  var ntpServer = String(ntpServerInput.value || "").trim();
+  var ntpValid = isValidNtpServer(ntpServer);
+  ntpServerInput.className = ntpValid ? "" : "invalid-t";
+  if (!ntpValid) {
+    errors.push("NTP 服务器格式无效：需为 host 或 host:port（≤64 字符）");
+    firstInvalid.push(ntpServerInput);
+  } else {
+    config.ntpServer = ntpServer;
+  }
+
+  var colorEntries = [
+    ["clock", colorClock, colorRowClock],
+    ["countdown", colorCountdown, colorRowCountdown],
+    ["countup", colorCountup, colorRowCountup],
+    ["warning", colorWarning, colorRowWarning],
+    ["dim", colorDim, colorRowDim]
+  ];
+  config.colors = deepCopy(state.config.colors);
+  colorEntries.forEach(function (entry) {
+    var key = entry[0];
+    var input = entry[1];
+    var row = entry[2];
+    var color = normalizeColor(input.value);
+    input.className = color ? "" : "invalid-t";
+    row.className = color ? "color-row" : "color-row invalid-t";
+    if (!color) {
+      errors.push("颜色格式无效：" + key + "（需 #RRGGBB）");
+      firstInvalid.push(input);
+    } else {
+      config.colors[key] = color;
+    }
+  });
+
+  config.display = {
+    splitBottomWhenIdle: "date"
+  };
+
+  var targets = state.config.targets || [];
+  if (targets.length > MAX_TARGETS) {
+    errors.push("目标最多 " + MAX_TARGETS + " 个（当前 " + targets.length + " 个）");
+  }
+  config.targets = targets.map(function (target) {
+    var date = normalizeDateInput(target.date);
+    var time = normalizeTimeInput(target.time);
+    return {
+      date: date || String(target.date || ""),
+      time: time || String(target.time || ""),
+      enabled: target.enabled !== false,
+      rawDate: target.date,
+      rawTime: target.time
+    };
+  });
+  config.targets.forEach(function (target, index) {
+    if (!normalizeDateInput(target.date)) {
+      errors.push("第 " + (index + 1) + " 个目标日期无效：需为 YYYY-MM-DD（2000..2099）");
+      if (targetRows[index]) firstInvalid.push(targetRows[index].dateInput);
+    }
+    if (!normalizeTimeInput(target.time)) {
+      errors.push("第 " + (index + 1) + " 个目标时间无效：需为 HH:MM:SS（含秒）");
+      if (targetRows[index]) firstInvalid.push(targetRows[index].timeInput);
+    }
+  });
+
+  config.live = {
+    source: liveSource.value,
+    url: String(liveUrl.value || "").trim(),
+    refreshSec: parseInteger(liveRefresh.value),
+    timeoutMs: parseInteger(liveTimeout.value)
+  };
+  var liveErrors = validateLiveSource(config.live, true);
+  if (LIVE_SOURCES.indexOf(config.live.source) < 0) {
+    firstInvalid.push(liveSource);
+  }
+  if (String(config.live.url || "").trim() &&
+      !/^http:\/\/\S+$/.test(String(config.live.url).trim())) {
+    firstInvalid.push(liveUrl);
+  }
+  if (parseInteger(config.live.refreshSec) === null) firstInvalid.push(liveRefresh);
+  if (parseInteger(config.live.timeoutMs) === null) firstInvalid.push(liveTimeout);
+  errors = errors.concat(liveErrors);
+
+  var pages = config.pages || [];
+  if (pages.length < 1 || pages.length > MAX_PAGES) {
+    errors.push("页面数量必须为 1.." + MAX_PAGES + "（当前 " + pages.length + "）");
+  }
+  var idSeen = {};
+  pages.forEach(function (page, index) {
+    var basics = validatePageBasics(page, index);
+    errors = errors.concat(basics);
+    if (page && pageIdOk(page.id)) {
+      if (idSeen[page.id]) errors.push("页面 id 重复：" + page.id);
+      idSeen[page.id] = true;
+    }
+    if (page.type === "live") {
+      errors = errors.concat(validateLiveRows(page));
+    }
+    if (page.id === state.selectedPageId) markPageBasics(page);
+  });
+
+  var defaultExists = pages.some(function (page) { return page.id === config.defaultPageId; });
+  if (!defaultExists) {
+    errors.push("默认页不存在：" + config.defaultPageId);
+  }
+
+  config.targets = config.targets.map(function (target) {
+    return { date: target.date, time: target.time, enabled: target.enabled };
+  });
+
+  return { ok: errors.length === 0, errors: errors, config: config, firstInvalid: firstInvalid };
+}
+
+function showSaveError(message) {
+  if (!saveError) return;
+  saveError.textContent = message;
+  saveError.style.display = "block";
+}
+
+function hideSaveError() {
+  if (!saveError) return;
+  saveError.textContent = "";
+  saveError.style.display = "none";
+}
+
+function payloadSafetyError(payload) {
+  if (!payload || payload.version !== 3) return "payload version 必须为 3";
+  var forbidden = { _note: true, _noteKey: true, _touched: true, _metricNote: true,
+    selectedPageId: true, password: true, previewState: true, previewPageId: true };
+  var badKey = "";
+  function walk(value) {
+    if (!value || typeof value !== "object" || badKey) return;
+    if (Object.prototype.hasOwnProperty.call(value, "__proto__")) { badKey = "__proto__"; return; }
+    Object.keys(value).forEach(function (key) {
+      if (forbidden[key]) badKey = key;
+      else walk(value[key]);
+    });
+  }
+  walk(payload);
+  return badKey ? "payload 含 UI/隐私字段：" + badKey : null;
+}
+
+/* ------------------------------ 配置加载 / 保存 ------------------------------ */
+function applyConfig(raw) {
+  var cfg = normalizeConfig(raw);
+  cfg.targets.forEach(function (target) {
+    var key = noteKey(target);
+    target._noteKey = key;
+    target._note = (key && typeof notes[key] === "string") ? notes[key] : "";
+    target._touched = false;
+  });
+
+  var version = detectConfigVersion(raw);
+  state.legacy = !!(version > 0 && version < 3);
+  state.config = cfg;
+  state.showErrors = false;
+  state.selectedPageId = pageById(state.selectedPageId) ? state.selectedPageId : cfg.defaultPageId;
+
+  tzMinutesInput.value = String(cfg.tzOffsetMinutes);
+  tzMinutesInput.className = "";
+  tzLabel.textContent = fmtUtcOffset(cfg.tzOffsetMinutes);
+  syncTzSelect(cfg.tzOffsetMinutes);
+
+  colorClock.value = cfg.colors.clock.toLowerCase();
+  colorCountdown.value = cfg.colors.countdown.toLowerCase();
+  colorCountup.value = cfg.colors.countup.toLowerCase();
+  colorWarning.value = cfg.colors.warning.toLowerCase();
+  colorDim.value = cfg.colors.dim.toLowerCase();
+  colorClock.className = "";
+  colorCountdown.className = "";
+  colorCountup.className = "";
+  colorWarning.className = "";
+  colorDim.className = "";
+  colorRowClock.className = "color-row";
+  colorRowCountdown.className = "color-row";
+  colorRowCountup.className = "color-row";
+  colorRowWarning.className = "color-row";
+  colorRowDim.className = "color-row";
+  hexClock.textContent = cfg.colors.clock;
+  hexCountdown.textContent = cfg.colors.countdown;
+  hexCountup.textContent = cfg.colors.countup;
+  hexWarning.textContent = cfg.colors.warning;
+  hexDim.textContent = cfg.colors.dim;
+
+  warnInput.value = String(cfg.warnSeconds);
+  warnInput.className = "";
+  ntpServerInput.value = cfg.ntpServer || "";
+  ntpServerInput.className = "";
+
+  renderLiveSourceForm();
+  renderTargets();
+  renderPages();
+  refreshBusy();
+  setBaseline();
+
+  if (state.legacy) {
+    v2Banner.style.display = "block";
+    v2Banner.textContent = "设备返回的是 v2 配置（固件可能仍是 v2）：页面与直播编辑仅供预览，" +
+        "v3 配置不能保存到 v2 固件。请刷新页面或升级固件。";
+  } else {
+    v2Banner.style.display = "none";
+    v2Banner.textContent = "";
+  }
+  updateDirty();
+}
+
+function autoCalibrate(device) {
+  var deviceUtc = parseInteger(device && device.timeUtc);
+  var now = browserEpoch();
+  if (deviceUtc === null || !shouldAutoSync(deviceUtc, now)) return Promise.resolve(false);
+
+  return api("POST", "/api/time", { epoch: now }).then(function (response) {
+    if (response && response.status >= 200 && response.status < 300 && response.data && response.data.ok) {
+      setDeviceClock(now);
+      renderDevice();
+      if (deviceUtc < TIME_VALID_EPOCH) {
+        addStatus("ok", "设备时间未同步，已用浏览器时间自动对时");
+      } else {
+        addStatus("ok", "设备时间与浏览器相差 " + Math.abs(now - deviceUtc) + " 秒，已自动对时");
+      }
+      return true;
+    }
+    addStatus("info", "自动对时失败：" + fullResponse(response) + "；可点“立即对时”重试");
+    return false;
+  }).catch(function (error) {
+    addStatus("info", "自动对时失败：" + errorText(error) + "；可点“立即对时”重试");
+    return false;
+  });
+}
+
+function loadConfig(options) {
+  options = options || {};
+  var base = getBase();
+  state.device = null;
+  state.deviceClock = null;
+  state.devicePageIds = {};
+  state.devicePageId = "";
+
+  if (!base) {
+    applyConfig(null);
+    renderDevice("未设置时钟地址，请填写后点“重新加载”（例：http://192.168.8.219:8080）");
+    return Promise.resolve(false);
+  }
+
+  return api("GET", "/api/config").then(function (response) {
+    if (!(response && response.data && response.data.ok && response.data.config)) {
+      if (options.keepOnError) return false;
+      applyConfig(null);
+      renderDevice("配置接口返回异常（HTTP " + (response ? response.status : "?") + "）");
+      if (!options.silent) addStatus("err", "配置接口返回异常", fullResponse(response));
+      return false;
+    }
+
+    var rawConfig = response.data.config;
+    applyConfig(rawConfig);
+    state.device = (response.data.device && typeof response.data.device === "object")
+      ? response.data.device : null;
+    if (state.device) applyDeviceClock(state.device);
+
+    state.devicePageIds = {};
+    (state.config.pages || []).forEach(function (page) { state.devicePageIds[page.id] = true; });
+    var devicePage = state.device && state.device.page && typeof state.device.page === "object"
+      ? state.device.page : null;
+    if (devicePage && typeof devicePage.id === "string" && state.devicePageIds[devicePage.id]) {
+      state.devicePageId = devicePage.id;
+    } else if (!state.legacy) {
+      state.devicePageId = (state.config.pages[0] || {}).id || "";
+    }
+
+    renderDevice();
+    renderNetwork();
+    renderPageList();
+    renderPageEditor();
+    refreshBusy();
+    updateDirty();
+    if (!options.silent) addStatus("ok", "已加载时钟配置（" + base + "）");
+
+    if (options.silent) return true;
+
+    if (!autoSyncDone) {
+      autoSyncDone = true;
+      return autoCalibrate(state.device).then(function (synced) {
+        if (!synced && state.device && !deviceClockValid()) {
+          addStatus("info", "设备时间仍未同步",
+              "请在“网络与对时”里点“立即对时”，或检查设备网络后重新加载。");
+        }
+        return true;
+      });
+    }
+    return true;
+  }).catch(function (error) {
+    if (options.keepOnError) return false;
+    applyConfig(null);
+    renderDevice("无法连接时钟：" + errorText(error));
+    if (!options.silent) {
+      addStatus("err", "无法连接时钟加载配置，已使用默认值（模拟器仍可离线预览）",
+          "地址：" + base + "\n" + errorText(error));
+    }
+    return false;
+  });
+}
+
+function saveConfig() {
+  if (busy) return;
+  if (state.legacy) {
+    showSaveError("设备固件为 v2，不能保存 v3 配置；请刷新页面或升级固件。");
+    addStatus("err", "保存中止：设备返回 v2 配置", "v3 页面只提交 version=3；v2 固件会拒绝。");
+    return;
+  }
+
+  state.showErrors = true;
+  updateTargetBadges(true);
+  var form = readFormState();
+  if (!form.ok) {
+    showSaveError("保存中止：请修正 " + form.errors.length + " 个问题（详情见状态日志）");
+    addStatus("err", "保存中止：请修正以下问题",
+        form.errors.map(function (line) { return "• " + line; }).join("\n"));
+    focusFirstInvalid(form.firstInvalid);
+    return;
+  }
+
+  var payload = buildPayload(form.config);
+  var safety = payloadSafetyError(payload);
+  if (safety) {
+    showSaveError(safety);
+    addStatus("err", "保存中止：payload 自检失败", safety);
+    return;
+  }
+  if (utf8ByteLength(JSON.stringify(payload)) > MAX_CONFIG_BODY) {
+    showSaveError("配置超过 " + MAX_CONFIG_BODY + " 字节（16 KB），请减少页面/房间或缩短标题。");
+    addStatus("err", "保存中止：配置体积超限",
+        "payload " + utf8ByteLength(JSON.stringify(payload)) + " 字节 > " + MAX_CONFIG_BODY);
+    return;
+  }
+
+  busy = true;
+  refreshBusy();
+  hideSaveError();
+  addStatus("info", "正在保存 v3 配置（" + form.config.pages.length + " 页）…");
+
+  api("POST", "/api/config", payload).then(function (response) {
+    if (!(response && response.status >= 200 && response.status < 300 &&
+        response.data && response.data.ok)) {
+      var detail = fullResponse(response);
+      var hint = "";
+      var serverError = response && response.data && typeof response.data.error === "string"
+        ? response.data.error : "";
+      if (response && response.status === 400 && /v2|version|refresh/i.test(serverError)) {
+        hint = "\n提示：设备不接受当前配置版本，请刷新页面；若固件仍是 v2，请先升级 v3 固件。";
+      } else if (response && response.status === 413) {
+        hint = "\n提示：请求体超过设备上限（16 KB）。";
+      }
+      showSaveError("保存失败：" + detail + hint);
+      addStatus("err", "保存失败", detail + hint);
+      return false;
+    }
+
+    addStatus("ok", "配置已保存，时钟已热生效");
+    var pageInfo = response.data.page && typeof response.data.page === "object"
+      ? response.data.page : null;
+    if (pageInfo && typeof pageInfo.id === "string") state.devicePageId = pageInfo.id;
+    renderPageList();
+
+    return loadConfig({ silent: true, keepOnError: true }).then(function (reloaded) {
+      if (reloaded) {
+        addStatus("ok", "已重新加载设备配置");
+      } else {
+        state.baselineSignature = payloadSignature(state.config);
+        updateDirty();
+        addStatus("info", "保存后重新加载配置失败（配置可能已生效）");
+      }
+      renderPageList();
+      updateDirty();
+
+      var epoch = browserEpoch();
+      return api("POST", "/api/time", { epoch: epoch }).then(function (timeResponse) {
+        if (timeResponse && timeResponse.status >= 200 && timeResponse.status < 300 &&
+            timeResponse.data && timeResponse.data.ok) {
+          setDeviceClock(epoch);
+          renderDevice();
+          hideSaveError();
+          return true;
+        }
+        addStatus("info", "静默对时失败：" + fullResponse(timeResponse) + "（配置已保存）");
+        return false;
+      }).catch(function (error) {
+        addStatus("info", "静默对时失败：" + errorText(error) + "（配置已保存）");
+        return false;
+      });
+    });
+  }).catch(function (error) {
+    showSaveError("保存失败：网络错误 " + errorText(error));
+    addStatus("err", "保存失败：网络错误", errorText(error));
+  }).then(function () {
+    busy = false;
+    refreshBusy();
+    updateDirty();
+  });
+}
+
+/* ------------------------------ 帧模型（与固件 v3 规则一致） ------------------------------ */
+function evaluateStage(nowEpoch, config) {
+  var now = Math.floor(nowEpoch);
+  var tz = config.tzOffsetMinutes;
+  var local = epochToLocalParts(now, tz);
+  var entries = [];
+
+  config.targets.forEach(function (target, index) {
+    if (target.enabled === false) return;
+    var epoch = dateTimeToEpoch(target.date, target.time, tz);
+    if (epoch === null) return;
+    entries.push({
+      epoch: epoch,
+      index: index,
+      date: normalizeDateInput(target.date),
+      time: normalizeTimeInput(target.time)
+    });
+  });
+
+  entries.sort(function (a, b) { return a.epoch - b.epoch || a.index - b.index; });
+  var unique = [];
+  entries.forEach(function (entry) {
+    if (!unique.length || unique[unique.length - 1].epoch !== entry.epoch) unique.push(entry);
+  });
+
+  var target = null;
+  for (var i = 0; i < unique.length; i++) {
+    if (unique[i].epoch >= now) { target = unique[i]; break; }
+  }
+
+  if (!target) {
+    if (unique.length) {
+      var last = unique[unique.length - 1];
+      var elapsed = Math.max(0, now - last.epoch);
+      var countup = formatCountdown(elapsed);
+      return {
+        kind: "countup",
+        text: countup.text,
+        color: config.colors.countup,
+        remainSeconds: 0,
+        elapsedSeconds: elapsed,
+        targetEpoch: last.epoch,
+        targetDate: last.date,
+        targetTime: last.time,
+        warning: false,
+        smallFont: countup.smallFont,
+        local: local
+      };
+    }
+    return {
+      kind: "clock",
+      text: local.time,
+      color: config.colors.clock,
+      remainSeconds: 0,
+      elapsedSeconds: 0,
+      targetEpoch: 0,
+      targetDate: "",
+      targetTime: "",
+      warning: false,
+      smallFont: false,
+      local: local
+    };
+  }
+
+  var remain = target.epoch - now;
+  var countdown = formatCountdown(remain);
+  var warning = config.warnSeconds > 0 && remain <= config.warnSeconds;
+  return {
+    kind: "countdown",
+    text: countdown.text,
+    color: warning ? config.colors.warning : config.colors.countdown,
+    remainSeconds: remain,
+    targetEpoch: target.epoch,
+    targetDate: target.date,
+    targetTime: target.time,
+    warning: warning,
+    smallFont: countdown.smallFont,
+    local: local
+  };
+}
+
+function frameRun(text, color, scale, baseline, boxX, boxWidth) {
+  return {
+    text: String(text === null || text === undefined ? "" : text),
+    color: color,
+    scale: scale,
+    baseline: baseline,
+    boxX: boxX,
+    boxWidth: boxWidth,
+    align: "center"
+  };
+}
+
+function buildPageFrame(nowEpoch, page, config, options) {
+  options = options || {};
+  config = config || state.config;
+  var now = Math.floor(nowEpoch === undefined || nowEpoch === null ? browserEpoch() : nowEpoch);
+  var tz = config.tzOffsetMinutes;
+  var local = epochToLocalParts(now, tz);
+  var timeValid = options.timeValid !== false;
+  var livePreview = options.livePreview || "none";
+  if (!page) page = (config.pages && config.pages.length ? config.pages[0] : defaultPages()[0]);
+  var type = PAGE_TYPES.indexOf(page.type) >= 0 ? page.type : "clock";
+  var frame = {
+    pageId: page.id,
+    pageType: type,
+    title: page.title || "",
+    now: now,
+    local: local,
+    timeValid: type === "live" ? true : timeValid,
+    livePreview: livePreview,
+    runs: [],
+    cells: [],
+    summary: "",
+    mode: "clock",
+    text: "",
+    color: config.colors.clock,
+    smallFont: false,
+    warning: false
+  };
+
+  if (type === "clock") {
+    var clockText = timeValid ? local.time : "--:--:--";
+    var clockColor = timeValid ? config.colors.clock : config.colors.dim;
+    frame.runs.push(frameRun(clockText, clockColor, 2, 13, 0, COLS));
+    frame.text = clockText;
+    frame.color = clockColor;
+    frame.mode = timeValid ? "clock" : "invalid";
+    frame.summary = clockText;
+    return frame;
+  }
+
+  if (type === "datetime") {
+    if (!timeValid) {
+      frame.runs.push(frameRun("--:--:--", config.colors.dim, 2, 10, 0, COLS));
+      frame.text = "--:--:--";
+      frame.color = config.colors.dim;
+      frame.mode = "invalid";
+      frame.summary = "--:--:--";
+      return frame;
+    }
+    frame.runs.push(frameRun(local.time, config.colors.clock, 2, 10, 0, COLS));
+    frame.runs.push(frameRun(local.date, config.colors.dim, 1, 15, 0, COLS));
+    frame.text = local.time;
+    frame.color = config.colors.clock;
+    frame.mode = "datetime";
+    frame.summary = local.date + " " + local.time;
+    return frame;
+  }
+
+  if (type === "clock_countdown") {
+    var stage = evaluateStage(now, config);
+    var topText = timeValid ? local.time : "--:--:--";
+    var topColor = timeValid ? config.colors.clock : config.colors.dim;
+    frame.runs.push(frameRun(topText, topColor, 1, 7, 0, COLS));
+    var bottomText = "";
+    var bottomColor = config.colors.dim;
+    if (!timeValid) {
+      bottomText = "--:--:--";
+      bottomColor = config.colors.dim;
+    } else if (stage.kind === "countdown") {
+      bottomText = stage.text;
+      bottomColor = stage.color;
+      frame.warning = stage.warning;
+    } else if (stage.kind === "countup") {
+      bottomText = stage.text;
+      bottomColor = stage.color;
+    } else {
+      bottomText = "NO COUNTDOWN";
+      bottomColor = config.colors.dim;
+    }
+    if (bottomText) frame.runs.push(frameRun(bottomText, bottomColor, 1, 14, 0, COLS));
+    frame.text = topText;
+    frame.color = topColor;
+    frame.smallFont = true;
+    frame.mode = !timeValid ? "invalid"
+      : (stage.kind === "countdown" ? "countdown"
+        : (stage.kind === "countup" ? "countup" : "clock"));
+    frame.bottomText = bottomText;
+    frame.bottomColor = bottomColor;
+    frame.summary = bottomText ? (topText + " / " + bottomText) : topText;
+    return frame;
+  }
+
+  if (type === "countdown") {
+    var stage2 = evaluateStage(now, config);
+    var text;
+    var color;
+    var scale = 2;
+    var baseline = 13;
+    if (!timeValid) {
+      text = "--:--:--";
+      color = config.colors.dim;
+      frame.mode = "invalid";
+    } else if (stage2.kind === "countdown") {
+      text = stage2.text;
+      color = stage2.color;
+      frame.warning = stage2.warning;
+      if (stage2.smallFont) { scale = 1; baseline = 10; }
+      frame.mode = "countdown";
+    } else if (stage2.kind === "countup") {
+      text = stage2.text;
+      color = stage2.color;
+      if (stage2.smallFont) { scale = 1; baseline = 10; }
+      frame.mode = "countup";
+    } else {
+      /* 没有任何目标：显示 NO COUNTDOWN（暗色） */
+      text = "NO COUNTDOWN";
+      color = config.colors.dim;
+      scale = 1;
+      baseline = 10;
+      frame.mode = "clock";
+    }
+    frame.runs.push(frameRun(text, color, scale, baseline, 0, COLS));
+    frame.text = text;
+    frame.color = color;
+    frame.smallFont = scale === 1;
+    frame.summary = text;
+    return frame;
+  }
+
+  /* live：上下两行，每行 8px；不受时间影响 */
+  frame.mode = "live";
+  var rooms = Array.isArray(page.rooms) ? page.rooms.slice(0, MAX_ROOMS) : [];
+  var enabledRooms = rooms.filter(function (room) { return room.enabled === true; });
+  if (!enabledRooms.length) {
+    frame.runs.push(frameRun("NO LIVE", config.colors.dim, 1, 10, 0, COLS));
+    frame.text = "NO LIVE";
+    frame.color = config.colors.dim;
+    frame.summary = "NO LIVE";
+    return frame;
+  }
+
+  var platformSeen = {};
+  enabledRooms.forEach(function (room, index) {
+    var roomValue = String(room.room || "").trim();
+    var label = liveLabelFor(room);
+    var value = "--";
+    var valueColor = config.colors.dim;
+    var stateName = "empty";
+    var occurrence = platformSeen[room.platform] || 0;
+    platformSeen[room.platform] = occurrence + 1;
+    if (roomValue) {
+      stateName = "unsupported";
+      if (livePreview === "sample") {
+        var metric = room.metric || page.metric || "online";
+        if (metric === "status") {
+          value = "LIVE";
+          valueColor = "#FFFFFF";
+          stateName = "ok";
+        } else if (metric === "online" || metric === "likes" || metric === "fans") {
+          value = formatLiveValue(sampleLiveValue(room.platform, occurrence));
+          valueColor = "#FFFFFF";
+          stateName = "ok";
+        }
+      }
+    }
+    frame.cells.push({
+      index: index,
+      row: index + 1,
+      rect: { x: 0, y: index * 8, w: COLS, h: 8 },
+      baseline: index === 0 ? 6 : 14,
+      label: label,
+      value: value,
+      labelColor: PLATFORM_COLORS[room.platform] || "#FFFFFF",
+      valueColor: valueColor,
+      state: stateName,
+      platform: room.platform,
+      room: roomValue
+    });
+  });
+
+  frame.summary = frame.cells.map(function (cell) {
+    return cell.label + " " + cell.value;
+  }).join(" ");
+  frame.text = frame.summary;
+  frame.color = frame.cells.length ? frame.cells[0].valueColor : config.colors.dim;
+  frame.smallFont = true;
+  return frame;
+}
+
+function frameMeta(frame, config) {
+  config = config || state.config;
+  var pages = config.pages || [];
+  var index = -1;
+  pages.forEach(function (page, i) { if (page.id === frame.pageId) index = i; });
+  if (index < 0) index = 0;
+  var prefix = "第 " + (index + 1) + "/" + pages.length + " 页 · " +
+      (PAGE_TYPE_LABELS[frame.pageType] || frame.pageType) + " · ";
+  var offset = fmtUtcOffset(config.tzOffsetMinutes);
+
+  if (frame.pageType === "live") {
+    if (!frame.cells.length) return prefix + "NO LIVE（没有启用的直播间）";
+    var summary = frame.cells.map(function (cell) {
+      return cell.label + " " + cell.value;
+    }).join(" ");
+    var note = frame.livePreview === "sample" ? "（示例数据，不来自设备）" : "（占位 --，不来自设备）";
+    return prefix + summary + note;
+  }
+  if (!frame.timeValid) {
+    return prefix + "--:--:--（设备时间未同步）";
+  }
+  if (frame.pageType === "clock") {
+    return prefix + frame.local.time + "（" + offset + "）";
+  }
+  if (frame.pageType === "datetime") {
+    return prefix + frame.local.date + " " + frame.local.time + "（" + offset + "）";
+  }
+  if (frame.pageType === "clock_countdown") {
+    var bottom = frame.bottomText ? frame.bottomText : "NO COUNTDOWN";
+    if (frame.warning) bottom += "（预警红色）";
+    return prefix + frame.local.time + " / " + bottom + "（" + offset + "）";
+  }
+  if (frame.pageType === "countdown") {
+    if (frame.mode === "countdown") {
+      return prefix + frame.text + (frame.warning ? "（预警红色）" : "") + "（" + offset + "）";
+    }
+    if (frame.mode === "countup") {
+      return prefix + "正计时 " + frame.text + "（" + offset + "）";
+    }
+    return prefix + "NO COUNTDOWN（没有倒计时目标）";
+  }
+  return prefix + frame.text;
+}
+
+function simTimeValid() {
+  if (!state.follow) return true;
+  if (!state.device) return true;
+  return deviceClockValid();
+}
+
+function currentSimEpoch() {
+  return state.follow ? browserEpoch() : Math.floor(state.manualEpoch);
+}
+
+function computeFrame() {
+  var page = selectedPage();
+  if (!page) page = (state.config.pages || defaultPages())[0];
+  var frame = buildPageFrame(currentSimEpoch(), page, state.config, {
+    timeValid: simTimeValid(),
+    livePreview: state.livePreview
+  });
+  frame.label = frameMeta(frame, state.config);
+  return frame;
+}
+
+/* ------------------------------ 像素字体 / LED 绘制 ------------------------------ */
+var COLS = 52;
+var ROWS = 16;
+var UNLIT = { r: 24, g: 27, b: 35 };
+var ledLayout = { cell: 8, w: COLS * 8, h: ROWS * 8 };
+
+function glyphFor(ch) {
+  if (Object.prototype.hasOwnProperty.call(TOM_THUMB, ch)) return ch;
+  var upper = String(ch).toUpperCase();
+  if (Object.prototype.hasOwnProperty.call(TOM_THUMB, upper)) return upper;
+  return "";
+}
+
+function charAdvancePixel(ch, scale) {
+  var key = glyphFor(ch);
+  if (!key) return 2 * scale;
+  if (key === " ") return 2 * scale;
+  return (TOM_WIDTH[key] || 0) * scale;
+}
+
+function measurePixelText(text, scale, spacing) {
+  var s = String(text === null || text === undefined ? "" : text);
+  var total = 0;
+  for (var i = 0; i < s.length; i++) {
+    total += charAdvancePixel(s[i], scale);
+    if (i < s.length - 1) total += spacing;
+  }
+  return total;
+}
+
+function fitTextToBox(text, scale, spacing, maxWidth) {
+  var value = String(text === null || text === undefined ? "" : text);
+  var gap = spacing;
+  while (measurePixelText(value, scale, gap) > maxWidth && gap > 0) gap--;
+  while (value.length > 1 && measurePixelText(value, scale, gap) > maxWidth) {
+    value = value.slice(0, -1);
+  }
+  return { text: value, spacing: gap };
+}
+
+function drawTextPixels(pixels, text, x, baseline, scale, spacing, color) {
+  var s = String(text === null || text === undefined ? "" : text);
+  var cursorX = Math.round(x);
+  for (var i = 0; i < s.length; i++) {
+    var key = glyphFor(s[i]);
+    if (key && TOM_THUMB[key]) {
+      var glyph = TOM_THUMB[key];
+      var rows = glyph[2];
+      var yOffset = glyph[1];
+      var visible = TOM_WIDTH[key] || 0;
+      for (var gy = 0; gy < rows.length; gy++) {
+        var bits = rows[gy];
+        for (var gx = 0; gx < visible; gx++) {
+          if (!(bits & (0x80 >> gx))) continue;
+          var originY = baseline + yOffset * scale + gy * scale;
+          var originX = cursorX + gx * scale;
+          for (var dy = 0; dy < scale; dy++) {
+            for (var dx = 0; dx < scale; dx++) {
+              var px = originX + dx;
+              var py = originY + dy;
+              if (px >= 0 && px < COLS && py >= 0 && py < ROWS) {
+                pixels[py * COLS + px] = color;
+              }
+            }
+          }
+        }
+      }
+    }
+    cursorX += charAdvancePixel(s[i], scale);
+    if (i < s.length - 1) cursorX += spacing;
+  }
+}
+
+function drawRunPixels(pixels, run) {
+  if (!run || !run.text) return;
+  var fit = fitTextToBox(run.text, run.scale, run.scale, run.boxWidth);
+  var width = measurePixelText(fit.text, run.scale, fit.spacing);
+  var x = run.align === "left" ? run.boxX : run.boxX + Math.floor((run.boxWidth - width) / 2);
+  drawTextPixels(pixels, fit.text, x, run.baseline, run.scale, fit.spacing, run.color);
+}
+
+function drawCellPixels(pixels, cell) {
+  var label = String(cell.label || "");
+  var value = String(cell.value || "--");
+  var labelWidth = measurePixelText(label, 1, 0);
+  var valueWidth = measurePixelText(value, 1, 0);
+  var gap = 1;
+  var maxWidth = cell.rect.w - 2;
+  while (value.length > 1 && labelWidth + gap + valueWidth > maxWidth) {
+    value = value.slice(0, -1);
+    valueWidth = measurePixelText(value, 1, 0);
+  }
+  while (label.length > 1 && labelWidth + gap + valueWidth > maxWidth) {
+    label = label.slice(0, -1);
+    labelWidth = measurePixelText(label, 1, 0);
+  }
+  var total = labelWidth + gap + valueWidth;
+  var x = cell.rect.x + Math.floor((cell.rect.w - total) / 2);
+  drawTextPixels(pixels, label, x, cell.baseline, 1, 0, cell.labelColor);
+  drawTextPixels(pixels, value, x + labelWidth + gap, cell.baseline, 1, 0, cell.valueColor);
+}
+
+function framePixels(frame) {
+  var pixels = new Array(COLS * ROWS);
+  frame.runs.forEach(function (run) { drawRunPixels(pixels, run); });
+  frame.cells.forEach(function (cell) { drawCellPixels(pixels, cell); });
+  return pixels;
+}
+
+function resizeCanvas() {
+  var parent = canvas.parentElement;
+  var width = parent && parent.clientWidth ? parent.clientWidth : 360;
+  var avail = Math.max(0, width - 14);
+  var cell = Math.min(avail / COLS, 9);
+  if (!isFinite(cell) || cell <= 0) cell = 8;
+  var w = cell * COLS;
+  var h = cell * ROWS;
+  var dpr = Math.min(window.devicePixelRatio || 1, 3);
+  canvas.style.width = w + "px";
+  canvas.style.height = h + "px";
+  canvas.width = Math.round(w * dpr);
+  canvas.height = Math.round(h * dpr);
+  if (ctx && ctx.setTransform) ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  ledLayout = { cell: cell, w: w, h: h };
+  lastFrameKey = "";
+}
+
+function drawFrame(frame) {
+  if (!ctx) return;
+  var cell = ledLayout.cell;
+  var radius = cell * 0.43;
+  var pixels = framePixels(frame);
+
+  ctx.fillStyle = "#05070a";
+  ctx.fillRect(0, 0, ledLayout.w, ledLayout.h);
+
+  for (var y = 0; y < ROWS; y++) {
+    for (var x = 0; x < COLS; x++) {
+      var color = pixels[y * COLS + x];
+      if (color) {
+        ctx.fillStyle = color;
+      } else {
+        ctx.fillStyle = "rgb(24,27,35)";
+      }
+      ctx.beginPath();
+      ctx.arc((x + 0.5) * cell, (y + 0.5) * cell, radius, 0, Math.PI * 2);
+      ctx.fill();
+    }
+  }
+
+  ctx.shadowBlur = cell * 0.55;
+  for (var j = 0; j < pixels.length; j++) {
+    var lit = pixels[j];
+    if (!lit) continue;
+    ctx.shadowColor = lit;
+    ctx.fillStyle = lit;
+    ctx.beginPath();
+    ctx.arc(((j % COLS) + 0.5) * cell, (Math.floor(j / COLS) + 0.5) * cell, radius, 0, Math.PI * 2);
+    ctx.fill();
+  }
+  ctx.shadowBlur = 0;
+}
+
+function paintFrame(frame, force) {
+  var label = frame.label || frameMeta(frame, state.config);
+  if (simMeta.textContent !== label) simMeta.textContent = label;
+  var key = JSON.stringify({
+    pageId: frame.pageId,
+    runs: frame.runs,
+    cells: frame.cells,
+    w: Math.round(ledLayout.w * 10) / 10
+  });
+  if (force || key !== lastFrameKey) {
+    drawFrame(frame);
+    lastFrameKey = key;
+  }
+}
+
+function drawCurrentFrame(force) {
+  paintFrame(computeFrame(), force === true);
+}
+
+/* ------------------------------ 模拟器控件 ------------------------------ */
+function setManualEnabled(enabled) {
+  manualBox.className = "sim-controls" + (enabled ? "" : " disabled-block");
+}
+
+function syncManualInputs() {
+  var parts = epochToLocalParts(state.manualEpoch, state.config.tzOffsetMinutes);
+  if (document.activeElement !== simDate && simDate.value !== parts.date) simDate.value = parts.date;
+  if (document.activeElement !== simTime && simTime.value !== parts.time) simTime.value = parts.time;
+}
+
+function onManualInput() {
+  var date = normalizeDateInput(simDate.value);
+  var time = normalizeTimeInput(simTime.value);
+  simDate.className = date ? "" : "invalid-t";
+  simTime.className = time ? "" : "invalid-t";
+  if (!date || !time) return;
+  var epoch = dateTimeToEpoch(date, time, state.config.tzOffsetMinutes);
+  if (epoch === null) return;
+  state.manualEpoch = epoch;
+  state.playing = false;
+  playBtn.textContent = "▶ 播放";
+  drawCurrentFrame(true);
+}
+
+followChk.addEventListener("change", function () {
+  state.follow = !!followChk.checked;
+  state.playing = false;
+  playBtn.textContent = "▶ 播放";
+  if (state.follow) {
+    setManualEnabled(false);
+  } else {
+    state.manualEpoch = browserEpoch();
+    setManualEnabled(true);
+    syncManualInputs();
+  }
+  drawCurrentFrame(true);
+});
+
+playBtn.addEventListener("click", function () {
+  if (state.follow) return;
+  state.playing = !state.playing;
+  playBtn.textContent = state.playing ? "⏸ 暂停" : "▶ 播放";
+});
+
+speedSel.addEventListener("change", function () {
+  var speed = parseInteger(speedSel.value);
+  state.speed = (speed !== null && speed > 0) ? speed : 1;
+});
+
+simDate.addEventListener("input", onManualInput);
+simDate.addEventListener("change", onManualInput);
+simTime.addEventListener("input", onManualInput);
+simTime.addEventListener("change", onManualInput);
+
+simPageSelect.addEventListener("change", function () {
+  if (selectPage(simPageSelect.value)) drawCurrentFrame(true);
+});
+
+simLiveState.addEventListener("change", function () {
+  state.livePreview = simLiveState.value === "sample" ? "sample" : "none";
+  drawCurrentFrame(true);
+});
+
+/* ------------------------------ 页面表单事件 ------------------------------ */
+pageTitle.addEventListener("input", function () {
+  var page = selectedPage();
+  if (!page) return;
+  page.title = pageTitle.value;
+  updatePageRowTitle(page);
+  markPageBasics(page);
+  updateDirty();
+});
+
+pageShortTitle.addEventListener("input", function () {
+  var page = selectedPage();
+  if (!page) return;
+  page.shortTitle = pageShortTitle.value;
+  markPageBasics(page);
+  updateDirty();
+});
+
+pageType.addEventListener("change", function () {
+  var page = selectedPage();
+  if (!page) return;
+  if (!changePageType(pageType.value)) {
+    pageType.value = page.type;
+  }
+});
+
+pageEnabled.addEventListener("change", function () {
+  var page = selectedPage();
+  if (!page) return;
+  page.enabled = pageEnabled.checked;
+  renderPageList();
+  updateDirty();
+});
+
+defaultPageChk.addEventListener("change", function () {
+  var page = selectedPage();
+  if (!page) return;
+  if (!defaultPageChk.checked) {
+    defaultPageChk.checked = true;
+    return;
+  }
+  state.config.defaultPageId = page.id;
+  renderPageList();
+  updateDirty();
+});
+
+setCurrentPageBtn.addEventListener("click", setCurrentPage);
+addPageBtn.addEventListener("click", addPage);
+
+livePageMetric.addEventListener("change", function () {
+  var page = selectedPage();
+  if (!page || page.type !== "live") return;
+  page.metric = livePageMetric.value;
+  renderLiveRows();
+  updateDirty();
+});
+
+/* ------------------------------ 直播数据源事件 ------------------------------ */
+liveSource.addEventListener("change", function () {
+  state.config.live.source = liveSource.value;
+  updateLiveSourceVisibility();
+  validateLiveSource(state.config.live, true);
+  updateDirty();
+});
+
+liveUrl.addEventListener("input", function () {
+  state.config.live.url = liveUrl.value;
+  validateLiveSource(state.config.live, true);
+  updateDirty();
+});
+
+liveUrl.addEventListener("change", function () {
+  state.config.live.url = String(liveUrl.value || "").trim();
+  liveUrl.value = state.config.live.url;
+  validateLiveSource(state.config.live, true);
+  updateDirty();
+});
+
+liveRefresh.addEventListener("input", function () {
+  var value = parseInteger(liveRefresh.value);
+  if (value !== null) state.config.live.refreshSec = value;
+  validateLiveSource(state.config.live, true);
+  updateDirty();
+});
+
+liveTimeout.addEventListener("input", function () {
+  var value = parseInteger(liveTimeout.value);
+  if (value !== null) state.config.live.timeoutMs = value;
+  validateLiveSource(state.config.live, true);
+  updateDirty();
+});
+
+/* ------------------------------ 其他表单事件 ------------------------------ */
+reloadBtn.addEventListener("click", function () {
+  if (busy) return;
+  if (isDirty() && !window.confirm("有未保存的页面/直播修改，重新加载会丢弃这些修改。继续？")) return;
+  busy = true;
+  refreshBusy();
+  Promise.all([loadConfig(), loadWifiList()]).then(function () {
+    busy = false;
+    refreshBusy();
+  });
+});
+
+tzSelect.addEventListener("change", function () {
+  var minutes = parseInteger(tzSelect.value);
+  if (minutes === null) {
+    if (tzMinutesInput.focus) tzMinutesInput.focus();
+    return;
+  }
+  applyTzMinutes(minutes);
+});
+
+tzMinutesInput.addEventListener("input", function () {
+  var minutes = parseInteger(tzMinutesInput.value);
+  var valid = minutes !== null && minutes >= TZ_MIN && minutes <= TZ_MAX;
+  tzMinutesInput.className = valid ? "" : "invalid-t";
+  if (valid) {
+    applyTzMinutes(minutes, { keepManualWall: false });
+  } else {
+    tzLabel.textContent = "UTC 超出范围";
+    updateDirty();
+  }
+});
+
+warnInput.addEventListener("input", function () {
+  var warn = parseInteger(warnInput.value);
+  var valid = warn !== null && warn >= 0 && warn <= WARN_MAX;
+  warnInput.className = valid ? "" : "invalid-t";
+  if (valid) state.config.warnSeconds = warn;
+  updateDirty();
+});
+
+ntpServerInput.addEventListener("input", function () {
+  state.config.ntpServer = String(ntpServerInput.value || "").trim();
+  updateDirty();
+});
+
+bindColor(colorClock, hexClock, colorRowClock, "clock");
+bindColor(colorCountdown, hexCountdown, colorRowCountdown, "countdown");
+bindColor(colorCountup, hexCountup, colorRowCountup, "countup");
+bindColor(colorWarning, hexWarning, colorRowWarning, "warning");
+bindColor(colorDim, hexDim, colorRowDim, "dim");
+
+addTargetBtn.addEventListener("click", addTarget);
+removeExpiredBtn.addEventListener("click", removeExpiredTargets);
+saveBtn.addEventListener("click", saveConfig);
+
+addWifiBtn.addEventListener("click", addWifi);
+wifiSaveBtn.addEventListener("click", saveWifiList);
+
+timeSyncBtn.addEventListener("click", function () {
+  if (timeSyncing) return;
+  var epoch = browserEpoch();
+  timeSyncing = true;
+  timeSyncBtn.disabled = true;
+
+  api("POST", "/api/time", { epoch: epoch }).then(function (response) {
+    if (response && response.status >= 200 && response.status < 300 && response.data && response.data.ok) {
+      setDeviceClock(epoch);
+      renderDevice();
+      addStatus("ok", "设备时间已校准为 " + fmtLocalDateTime(epoch, deviceTzMinutes()) +
+          "（" + fmtUtcOffset(deviceTzMinutes()) + "）");
+      return;
+    }
+    addStatus("err", "对时失败", fullResponse(response));
+  }).catch(function (error) {
+    addStatus("err", "对时失败：网络错误", errorText(error));
+  }).then(function () {
+    timeSyncing = false;
+    timeSyncBtn.disabled = false;
+  });
+});
+
+window.addEventListener("resize", resizeCanvas);
+window.addEventListener("beforeunload", function (event) {
+  if (!isDirty()) return undefined;
+  if (event) {
+    event.preventDefault();
+    event.returnValue = "";
+  }
+  return "";
+});
+
+/* ------------------------------ 主循环（rAF，1 秒节拍） ------------------------------ */
+function requestFrame(callback) {
+  if (typeof requestAnimationFrame === "function") return requestAnimationFrame(callback);
+  return setTimeout(callback, 500);
+}
+
+function loop(timestamp) {
+  var dt = 0;
+  if (lastFrameTs !== null) {
+    dt = Math.min(Math.max((timestamp - lastFrameTs) / 1000, 0), 1);
+  }
+  lastFrameTs = timestamp;
+
+  if (!state.follow && state.playing) {
+    state.manualEpoch += dt * state.speed;
+  }
+  if (!state.follow) syncManualInputs();
+
+  updateTargetBadges(false);
+  updateDeviceClockUI();
+
+  var frame = computeFrame();
+  paintFrame(frame, false);
+  if (simMeta.textContent !== frame.label) simMeta.textContent = frame.label;
+
+  requestFrame(loop);
+}
+
+/* ------------------------------ 自检出口（纯函数；不影响页面行为） ------------------------------ */
+window.__multitimer = {
+  MAX_TARGETS: MAX_TARGETS,
+  MAX_WIFI: MAX_WIFI,
+  MAX_PAGES: MAX_PAGES,
+  MAX_ROOMS: MAX_ROOMS,
+  MAX_CONFIG_BODY: MAX_CONFIG_BODY,
+  WIFI_REFRESH_DELAY_MS: WIFI_REFRESH_DELAY_MS,
+  TZ_MIN: TZ_MIN,
+  TZ_MAX: TZ_MAX,
+  WARN_MAX: WARN_MAX,
+  TIME_VALID_EPOCH: TIME_VALID_EPOCH,
+  AUTO_SYNC_THRESHOLD: AUTO_SYNC_THRESHOLD,
+  TZ_ZONES: TZ_ZONES,
+  PAGE_TYPES: PAGE_TYPES,
+  PAGE_TYPE_LABELS: PAGE_TYPE_LABELS,
+  LIVE_SOURCES: LIVE_SOURCES,
+  LIVE_METRICS: LIVE_METRICS,
+  LIVE_CAPABILITIES: LIVE_CAPABILITIES,
+  PLATFORMS: PLATFORMS,
+  PLATFORM_COLORS: PLATFORM_COLORS,
+  TOM_THUMB: TOM_THUMB,
+  TOM_WIDTH: TOM_WIDTH,
+  pad2: pad2,
+  parseInteger: parseInteger,
+  parseDateStr: parseDateStr,
+  normalizeDateInput: normalizeDateInput,
+  parseTimeStr: parseTimeStr,
+  normalizeTimeInput: normalizeTimeInput,
+  fmtHMS: fmtHMS,
+  fmtDuration: fmtDuration,
+  fmtUtcOffset: fmtUtcOffset,
+  fmtLocalDateTime: fmtLocalDateTime,
+  dateTimeToEpoch: dateTimeToEpoch,
+  epochToLocalParts: epochToLocalParts,
+  shouldAutoSync: shouldAutoSync,
+  formatCountdown: formatCountdown,
+  normalizeColor: normalizeColor,
+  formatLiveValue: formatLiveValue,
+  liveLabelFor: liveLabelFor,
+  metricOptionsFor: metricOptionsFor,
+  metricLabel: metricLabel,
+  roomRule: roomRule,
+  roomFormatOk: roomFormatOk,
+  parseRoomLink: parseRoomLink,
+  sanitizeRoomInput: sanitizeRoomInput,
+  defaultConfig: defaultConfig,
+  defaultPages: defaultPages,
+  defaultRooms: defaultRooms,
+  normalizeConfig: normalizeConfig,
+  normalizePage: normalizePage,
+  migrateV2Pages: migrateV2Pages,
+  buildPayload: buildPayload,
+  payloadSignature: payloadSignature,
+  payloadSizeBytes: payloadSizeBytes,
+  detectConfigVersion: detectConfigVersion,
+  pageIdOk: pageIdOk,
+  generatePageId: generatePageId,
+  validatePageBasics: validatePageBasics,
+  pageTitleValidation: pageTitleValidation,
+  shortTitleValidation: shortTitleValidation,
+  evaluateStage: evaluateStage,
+  buildPageFrame: buildPageFrame,
+  frameMeta: frameMeta,
+  computeFrame: computeFrame,
+  measurePixelText: measurePixelText,
+  fitTextToBox: fitTextToBox,
+  framePixels: framePixels,
+  readFormState: readFormState,
+  deviceNowUtc: deviceNowUtc,
+  deviceClockValid: deviceClockValid,
+  normalizeBaseUrl: normalizeBaseUrl,
+  isValidNtpServer: isValidNtpServer,
+  getBase: getBase,
+  getWifiState: function () { return wifiState; },
+  getState: function () { return state; },
+  getDraft: function () { return state.config; },
+  getPages: function () { return state.config.pages.slice(); },
+  getSelectedPageId: function () { return state.selectedPageId; },
+  getDevicePageId: function () { return state.devicePageId; },
+  getPageRowRefs: function () { return pageRowRefs; },
+  getLiveRowRefs: function () { return liveRowRefs; },
+  getFrame: function () { return computeFrame(); },
+  getPageFrame: function (pageId, now, livePreview) {
+    var page = pageById(pageId) || selectedPage();
+    return buildPageFrame(now === undefined ? currentSimEpoch() : now, page, state.config, {
+      timeValid: simTimeValid(),
+      livePreview: livePreview === undefined ? state.livePreview : livePreview
+    });
+  },
+  selectPage: selectPage,
+  setLivePreview: function (value) {
+    state.livePreview = value === "sample" ? "sample" : "none";
+    renderSimPageOptions();
+    drawCurrentFrame(true);
+    return state.livePreview;
+  },
+  isDirty: isDirty,
+  getLiveSourceHint: function () { return liveSourceHint.textContent; }
+};
+
+/* ------------------------------ 静态下拉填充 ------------------------------ */
+function populatePageTypeSelect() {
+  pageType.innerHTML = "";
+  PAGE_TYPES.forEach(function (type) {
+    var option = document.createElement("option");
+    option.value = type;
+    option.textContent = PAGE_TYPE_LABELS[type];
+    pageType.appendChild(option);
+  });
+}
+
+function populateLiveMetricSelect() {
+  livePageMetric.innerHTML = "";
+  LIVE_METRICS.forEach(function (metric) {
+    var option = document.createElement("option");
+    option.value = metric;
+    option.textContent = LIVE_METRIC_LABELS[metric];
+    livePageMetric.appendChild(option);
+  });
+}
+
+function populateLiveSourceSelect() {
+  liveSource.innerHTML = "";
+  LIVE_SOURCES.forEach(function (source) {
+    var option = document.createElement("option");
+    option.value = source;
+    option.textContent = LIVE_SOURCE_LABELS[source];
+    liveSource.appendChild(option);
+  });
+}
+
+function populateSimLiveStateSelect() {
+  simLiveState.innerHTML = "";
+  [["none", "无数据（-- 占位）"], ["sample", "示例数据（不来自设备）"]].forEach(function (item) {
+    var option = document.createElement("option");
+    option.value = item[0];
+    option.textContent = item[1];
+    simLiveState.appendChild(option);
+  });
+}
+
+/* ------------------------------ 启动 ------------------------------ */
+populateTzSelect();
+populatePageTypeSelect();
+populateLiveMetricSelect();
+populateLiveSourceSelect();
+populateSimLiveStateSelect();
+var autoBase = defaultBase();
+followChk.checked = true;
+simLiveState.value = "none";
+setManualEnabled(false);
+refreshWifiButtons();
+syncManualInputs();
+renderPages();
+renderLiveSourceForm();
+resizeCanvas();
+updateDirty();
+requestFrame(loop);
+loadConfig();
+loadWifiList();
+</script>
+</body>
+</html>

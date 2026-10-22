@@ -1,0 +1,15 @@
+{"ts": "2026-10-22T08:09:53.038+00:00", "client": "127.0.0.1", "method": "GET", "path": "/", "status": 200}
+{"ts": "2026-10-22T08:09:53.096+00:00", "client": "127.0.0.1", "method": "GET", "path": "/api/config", "status": 200, "note": "fixture=exact"}
+{"ts": "2026-10-22T08:09:53.946+00:00", "client": "127.0.0.1", "method": "GET", "path": "/", "status": 200}
+{"ts": "2026-10-22T08:09:54.011+00:00", "client": "127.0.0.1", "method": "GET", "path": "/api/config", "status": 200, "note": "fixture=exact"}
+{"ts": "2026-10-22T08:09:54.863+00:00", "client": "127.0.0.1", "method": "GET", "path": "/", "status": 200}
+{"ts": "2026-10-22T08:09:54.922+00:00", "client": "127.0.0.1", "method": "GET", "path": "/api/config", "status": 200, "note": "fixture=exact"}
+{"ts": "2026-10-22T08:09:58.148+00:00", "client": "127.0.0.1", "method": "GET", "path": "/", "status": 200}
+{"ts": "2026-10-22T08:09:58.160+00:00", "client": "127.0.0.1", "method": "GET", "path": "/api/config", "status": 200, "note": "fixture=exact"}
+{"ts": "2026-10-22T08:09:59.859+00:00", "client": "127.0.0.1", "method": "GET", "path": "/", "status": 200}
+{"ts": "2026-10-22T08:09:59.871+00:00", "client": "127.0.0.1", "method": "GET", "path": "/api/config", "status": 200, "note": "fixture=exact"}
+{"ts": "2026-10-22T08:10:04.608+00:00", "client": "127.0.0.1", "method": "GET", "path": "/", "status": 200}
+{"ts": "2026-10-22T08:10:04.623+00:00", "client": "127.0.0.1", "method": "GET", "path": "/api/config", "status": 200, "note": "fixture=exact"}
+{"ts": "2026-10-22T08:10:06.062+00:00", "client": "127.0.0.1", "method": "POST", "path": "/api/config", "status": 200, "body": {"tzOffset": 8, "warnSeconds": 10, "colors": {"countdown": "#00FF00", "warning": "#FF2020", "countup": "#0080FF"}, "points": [{"time": "10:00", "enabled": true}, {"time": "12:30", "enabled": true}]}}
+{"ts": "2026-10-22T08:10:06.065+00:00", "client": "127.0.0.1", "method": "POST", "path": "/api/time", "status": 200, "body": {"epoch": 1792656606}}
+{"ts": "2026-10-22T08:10:06.067+00:00", "client": "127.0.0.1", "method": "GET", "path": "/api/config", "status": 200, "note": "fixture=exact"}

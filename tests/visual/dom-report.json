@@ -1,0 +1,50 @@
+{
+  "file": "tests\\visual\\dom-mobile.html",
+  "bytes": 53087,
+  "checks": {
+    "led_canvas": true,
+    "point_list": true,
+    "point_rows": 2,
+    "save_button": true,
+    "save_button_text": "保存到时钟（热生效）",
+    "device_info": true,
+    "device_info_shown": true,
+    "device_info_lines": [
+      "IP 地址 192.168.8.219",
+      "WiFi 已连接",
+      "WiFi 名称 TestWiFi",
+      "运行时长 1 天 1 小时",
+      "设备时间 2026-10-22 16:08:07（UTC+8）"
+    ],
+    "status_items": [
+      {
+        "kind": "ok",
+        "title": "已加载时钟配置（http://127.0.0.1:18080）",
+        "time": "16:08:07"
+      }
+    ],
+    "loaded_status_present": true,
+    "wifi_button_present": true,
+    "time_sync_button_present": true,
+    "uncaught_error_text_in_visible_dom": false,
+    "time_inputs": [
+      {
+        "id": "simTime",
+        "type": "time",
+        "value_attr": "00:00:00"
+      },
+      {
+        "id": null,
+        "type": "time",
+        "value_attr": null
+      },
+      {
+        "id": null,
+        "type": "time",
+        "value_attr": null
+      }
+    ]
+  },
+  "visible_text_excerpt": "Ulanzi TC002 多时间点倒计时 Ulanzi TC002 多时间点倒计时 直连时钟原生固件 · 保存即热生效，无需中间服务 时钟连接 时钟地址 重新加载 IP 地址 192.168.8.219 WiFi 已连接 WiFi 名称 TestWiFi 运行时长 1 天 1 小时 设备时间 2026-10-22 16:08:07（UTC+8） 页面由时钟直接托管时默认无需修改；用本地文件方式打开时，请手动填写时钟地址（含端口）。 网络与对时 当前 WiFi TestWiFi IP 地址 192.168.8.219 WiFi 名称 WiFi 密码 保存 WiFi 并重连 立即对时 切换 WiFi 后设备会短暂离线；密码只随本次请求提交，不会写入浏览器本地存储。 52 × 16 LED 模拟器（无需硬件即可预览） 正计时（自 12:30）03:38:07 实时跟随（按 UTC 偏移换算时钟本地时间） ▶ 播放 1x 10x 60x 300x 时间点（最多 8 个） ▲ ▼ ✕ ▲ ▼ ✕ ＋ 添加时间点 时间为 24 小时制 HH:MM；备注仅保存在本浏览器，不会写入时钟。 时区与外观 ",
+  "ok": true
+}

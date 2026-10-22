@@ -1,0 +1,2 @@
+{"ts": "2026-10-22T08:12:09.194+00:00", "client": "127.0.0.1", "method": "GET", "path": "/", "status": 200}
+{"ts": "2026-10-22T08:12:09.266+00:00", "client": "127.0.0.1", "method": "GET", "path": "/api/config", "status": 200, "note": "fixture=relative"}

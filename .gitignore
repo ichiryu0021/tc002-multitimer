@@ -1,0 +1,21 @@
+# 构建产物 / IDE workspace
+build/
+native/MultiTimer/Release/
+snapshots/
+
+# 测试生成物
+tests/out/
+tests/visual/*.png
+
+# 大型/平台相关工具（不纳入源码快照）
+tools/platform-tools/
+tools/*.exe
+tools/*.zip
+legacy/awtrix-ng/.venv_lib/
+
+# Python
+__pycache__/
+*.pyc
+
+# 本机配置/敏感备份（build/ 已整体忽略）
+config.json

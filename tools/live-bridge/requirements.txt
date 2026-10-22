@@ -1,0 +1,7 @@
+# MultiTimer v3 live bridge - required dependency
+requests>=2.25,<3
+
+# Optional: Kuaishou rooms need a real browser (JS signature cannot be replayed).
+# pip install playwright
+# python -m playwright install chromium
+# playwright>=1.40

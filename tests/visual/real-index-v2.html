@@ -1,0 +1,1254 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Ulanzi TC002 多时间点倒计时</title>
+<style>
+  /* ============ 基础：深色、移动端优先 ============ */
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  html, body { margin: 0; padding: 0; }
+  body {
+    background: #0b0d12;
+    color: #e6e9f0;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC",
+                 "Hiragino Sans GB", "Microsoft YaHei", sans-serif;
+    font-size: 15px;
+    line-height: 1.45;
+    padding-bottom: calc(20px + env(safe-area-inset-bottom));
+  }
+  main { max-width: 480px; margin: 0 auto; padding: 14px 12px 0; }
+  h1 { font-size: 17px; font-weight: 700; margin: 4px 2px 12px; color: #f2f4f9; }
+  h1 small { display: block; font-size: 12px; font-weight: 400; color: #8b93a7; margin-top: 2px; }
+
+  .card {
+    background: #151821;
+    border: 1px solid #232838;
+    border-radius: 14px;
+    padding: 14px;
+    margin-bottom: 12px;
+  }
+  .card-title { font-size: 14px; font-weight: 600; color: #b9c0d2; margin: 0 0 10px; }
+
+  label.field { display: block; font-size: 12px; color: #8b93a7; margin-bottom: 6px; }
+
+  input[type="text"], input[type="time"], input[type="number"], input[type="password"] {
+    width: 100%;
+    background: #0e1118;
+    border: 1px solid #2c3245;
+    border-radius: 9px;
+    color: #e6e9f0;
+    font-size: 16px; /* >=16px 防止 iOS 聚焦自动放大 */
+    padding: 10px 10px;
+    outline: none;
+  }
+  input:focus { border-color: #4da3ff; }
+  input[type="number"] { width: 100%; }
+  input.invalid-t { border-color: #c0463f; }
+  input[type="color"] {
+    width: 46px; height: 38px; padding: 2px;
+    background: #0e1118; border: 1px solid #2c3245; border-radius: 9px;
+  }
+
+  button {
+    appearance: none;
+    border: 1px solid #2c3245;
+    background: #1d2230;
+    color: #e6e9f0;
+    border-radius: 10px;
+    font-size: 15px;
+    padding: 11px 14px;
+    min-height: 44px;
+    cursor: pointer;
+  }
+  button:active:not(:disabled) { background: #262c3d; }
+  button:disabled { opacity: .45; cursor: not-allowed; }
+  button.primary { background: #2b6cb0; border-color: #2b6cb0; color: #fff; }
+  button.block { width: 100%; margin-top: 8px; }
+
+  .row { display: flex; gap: 8px; align-items: center; }
+  .grow { flex: 1; min-width: 0; }
+  .hint { font-size: 11px; color: #717a90; margin-top: 6px; }
+
+  /* ============ 开关 ============ */
+  .switch { position: relative; display: inline-block; width: 46px; height: 28px; flex: none; }
+  .switch input { position: absolute; opacity: 0; width: 100%; height: 100%; margin: 0; }
+  .switch .track {
+    position: absolute; inset: 0; background: #2a3040; border-radius: 999px; transition: background .15s;
+  }
+  .switch .track::before {
+    content: ""; position: absolute; width: 22px; height: 22px; left: 3px; top: 3px;
+    background: #c7cdd9; border-radius: 50%; transition: transform .15s;
+  }
+  .switch input:checked + .track { background: #2f8a57; }
+  .switch input:checked + .track::before { transform: translateX(18px); background: #fff; }
+
+  /* ============ 设备信息 ============ */
+  #deviceInfo {
+    display: none; margin-top: 10px; padding: 9px 10px;
+    border-radius: 9px; font-size: 13px;
+    border: 1px solid #2c3245; background: #0e1118;
+  }
+  #deviceInfo.bad { border-color: #7a3535; }
+  #deviceInfo .dline { display: flex; justify-content: space-between; gap: 10px; margin: 3px 0; }
+  #deviceInfo .k { color: #8b93a7; flex: none; }
+  #deviceInfo .v { color: #dfe4ee; text-align: right; word-break: break-all; }
+  #deviceInfo.bad .v { color: #ff7a7a; }
+
+  /* ============ 网络与对时 ============ */
+  .net-info {
+    margin-bottom: 12px; padding: 9px 10px;
+    border-radius: 9px; font-size: 13px;
+    border: 1px solid #2c3245; background: #0e1118;
+  }
+  .net-info .nline { display: flex; justify-content: space-between; gap: 10px; margin: 3px 0; }
+  .net-info .k { color: #8b93a7; flex: none; }
+  .net-info .v { color: #dfe4ee; text-align: right; word-break: break-all; }
+  .net-field { margin-top: 12px; }
+
+  /* ============ LED 模拟器 ============ */
+  .led-wrap {
+    background: #000;
+    border-radius: 10px;
+    padding: 7px;
+    text-align: center;
+    overflow: hidden;
+  }
+  #led { display: inline-block; background: #05070a; border-radius: 4px; }
+  #stageText {
+    margin-top: 9px; font-size: 13px; color: #b9c0d2; text-align: center;
+    min-height: 19px; word-break: break-all;
+  }
+  .sim-controls { margin-top: 12px; display: flex; flex-direction: column; gap: 9px; }
+  .sim-controls.disabled-block { opacity: .45; pointer-events: none; }
+  .sim-time-row { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+  .sim-time-row input[type="time"] { width: 118px; flex: none; }
+  .sim-time-row input[type="range"] { flex: 1; min-width: 110px; }
+  .speed-sel {
+    background: #0e1118; color: #e6e9f0; border: 1px solid #2c3245;
+    border-radius: 9px; font-size: 15px; padding: 9px 8px; min-height: 40px;
+  }
+  #playBtn { min-width: 104px; }
+
+  /* ============ 时间点行 ============ */
+  .point-row {
+    border: 1px solid #232838; border-radius: 11px;
+    padding: 9px; margin-bottom: 8px; background: #10131b;
+  }
+  .point-row.off { opacity: .55; }
+  .point-line1 { display: flex; gap: 8px; align-items: center; }
+  .point-line1 input[type="time"] { width: 104px; flex: none; }
+  .icon-btn { min-height: 44px; min-width: 44px; padding: 6px 8px; font-size: 14px; }
+  .p-del { border-color: #7a3535; color: #ff7a7a; }
+  .point-line2 { margin-top: 7px; }
+  #addPointBtn { width: 100%; }
+
+  /* ============ 外观卡 ============ */
+  .color-row { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; }
+  .color-row .lbl { flex: 1; font-size: 14px; }
+  .color-row .hex { font-size: 11px; color: #717a90; width: 62px; font-family: ui-monospace, Menlo, Consolas, monospace; }
+  .num-row { display: flex; align-items: center; gap: 10px; margin-top: 4px; }
+  .num-row input { max-width: 110px; }
+  .num-row .unit { color: #8b93a7; font-size: 13px; }
+
+  /* ============ 状态条 ============ */
+  .status-item {
+    border: 1px solid #232838; border-radius: 10px;
+    background: #10131b; padding: 9px 11px; margin-bottom: 8px; font-size: 13px;
+  }
+  .status-item .head { display: flex; align-items: center; gap: 7px; }
+  .status-item .dot { width: 8px; height: 8px; border-radius: 50%; flex: none; background: #4da3ff; }
+  .status-item.ok .dot { background: #4ade80; }
+  .status-item.err .dot { background: #ff5c5c; }
+  .status-item.info .dot { background: #4da3ff; }
+  .status-item .t { flex: 1; }
+  .status-item .ts { color: #66708a; font-size: 11px; font-family: ui-monospace, Menlo, Consolas, monospace; }
+  .status-item pre {
+    margin: 7px 0 0; padding: 8px; border-radius: 7px;
+    background: #0a0c11; border: 1px solid #232838;
+    color: #e0b3b3; font-family: ui-monospace, Menlo, Consolas, monospace;
+    font-size: 12px; line-height: 1.45; white-space: pre-wrap; word-break: break-all;
+  }
+</style>
+</head>
+<body>
+<main>
+  <h1>Ulanzi TC002 多时间点倒计时
+    <small>直连时钟原生固件 · 保存即热生效，无需中间服务</small>
+  </h1>
+
+  <!-- 1. 连接卡 -->
+  <section class="card">
+    <p class="card-title">时钟连接</p>
+    <label class="field" for="baseInput">时钟地址</label>
+    <div class="row">
+      <div class="grow">
+        <input id="baseInput" type="text" inputmode="url"
+               placeholder="http://192.168.8.219:8080"
+               autocomplete="off" autocapitalize="none" spellcheck="false">
+      </div>
+      <button id="reloadBtn" class="primary" style="flex:none" data-busy>重新加载</button>
+    </div>
+    <div id="deviceInfo"></div>
+    <p class="hint">页面由时钟直接托管时默认无需修改；用本地文件方式打开时，请手动填写时钟地址（含端口）。</p>
+  </section>
+
+  <!-- 2. 网络与对时 -->
+  <section class="card">
+    <p class="card-title">网络与对时</p>
+    <div class="net-info">
+      <div class="nline">
+        <span class="k">当前 WiFi</span>
+        <span class="v" id="netSsid">未连接/未知</span>
+      </div>
+      <div class="nline">
+        <span class="k">IP 地址</span>
+        <span class="v" id="netIp">未知</span>
+      </div>
+    </div>
+    <label class="field" for="wifiSsidInput">WiFi 名称</label>
+    <input id="wifiSsidInput" type="text" maxlength="32"
+           placeholder="要连接的 WiFi 名称" autocomplete="off"
+           autocapitalize="none" spellcheck="false">
+    <label class="field net-field" for="wifiPassInput">WiFi 密码</label>
+    <input id="wifiPassInput" type="password" maxlength="64"
+           placeholder="仅用于本次保存，不会保存在网页中"
+           autocomplete="new-password">
+    <button id="wifiSaveBtn" type="button" class="primary block">保存 WiFi 并重连</button>
+    <button id="timeSyncBtn" type="button" class="block">立即对时</button>
+    <p class="hint">切换 WiFi 后设备会短暂离线；密码只随本次请求提交，不会写入浏览器本地存储。</p>
+  </section>
+
+  <!-- 3. LED 模拟器 -->
+  <section class="card">
+    <p class="card-title">52 × 16 LED 模拟器（无需硬件即可预览）</p>
+    <div class="led-wrap">
+      <canvas id="led" width="416" height="128"></canvas>
+    </div>
+    <div id="stageText">未配置时间点</div>
+
+    <div class="sim-controls">
+      <div class="row">
+        <label class="switch">
+          <input type="checkbox" id="followChk" checked>
+          <span class="track"></span>
+        </label>
+        <span style="flex:1">实时跟随（按 UTC 偏移换算时钟本地时间）</span>
+      </div>
+
+      <div class="sim-controls disabled-block" id="manualBox">
+        <div class="sim-time-row">
+          <input type="time" id="simTime" step="1" value="00:00:00">
+          <input type="range" id="simSlider" min="0" max="86399" step="1" value="0">
+        </div>
+        <div class="row">
+          <button id="playBtn" type="button">▶ 播放</button>
+          <select id="speedSel" class="speed-sel grow">
+            <option value="1">1x</option>
+            <option value="10">10x</option>
+            <option value="60">60x</option>
+            <option value="300">300x</option>
+          </select>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 4. 时间点卡 -->
+  <section class="card">
+    <p class="card-title">时间点（最多 8 个）</p>
+    <div id="pointList"></div>
+    <button id="addPointBtn" type="button">＋ 添加时间点</button>
+    <p class="hint">时间为 24 小时制 HH:MM；备注仅保存在本浏览器，不会写入时钟。</p>
+  </section>
+
+  <!-- 5. 外观卡 -->
+  <section class="card">
+    <p class="card-title">时区与外观</p>
+    <div class="num-row">
+      <span style="flex:1">时区（UTC 偏移，中国=8）</span>
+      <input type="number" id="tzInput" min="-12" max="14" step="1" value="8">
+      <span class="unit">-12 ～ 14</span>
+    </div>
+    <p class="hint">时钟没有时区数据库，本地时间 = UTC + 该偏移。</p>
+    <div class="color-row" style="margin-top:10px">
+      <input type="color" id="colorCountdown" value="#00ff00">
+      <span class="lbl">倒计时颜色</span>
+      <span class="hex" id="hexCountdown">#00FF00</span>
+    </div>
+    <div class="color-row">
+      <input type="color" id="colorWarning" value="#ff2020">
+      <span class="lbl">预警颜色（最后 N 秒常亮红色）</span>
+      <span class="hex" id="hexWarning">#FF2020</span>
+    </div>
+    <div class="color-row">
+      <input type="color" id="colorCountup" value="#0080ff">
+      <span class="lbl">正计时颜色</span>
+      <span class="hex" id="hexCountup">#0080FF</span>
+    </div>
+    <div class="num-row">
+      <span style="flex:1">进入预警的剩余秒数</span>
+      <input type="number" id="warnInput" min="0" max="600" step="1" value="10">
+      <span class="unit">秒（0–600）</span>
+    </div>
+  </section>
+
+  <!-- 6. 操作区 -->
+  <section class="card">
+    <p class="card-title">操作</p>
+    <button id="saveBtn" class="primary block" data-busy>保存到时钟（热生效）</button>
+  </section>
+
+  <div id="statusLog"></div>
+</main>
+
+<script>
+"use strict";
+/* ========================================================================
+ * Ulanzi TC002 多时间点倒计时 - 手机配置页（直连原生固件版）
+ * 纯原生 JS，无任何外部依赖，整页 gzip 内嵌固件由设备 HTTP 服务托管。
+ * 接口契约：
+ *   GET  {base}/api/config -> {ok, config:{tzOffset,warnSeconds,colors,points},
+ *                              device:{ip,ssid,wifi,uptimeSec,timeUtc,timeValid}}
+ *   POST {base}/api/config  body 同上 config schema；points 项仅 {time,enabled}
+ *   POST {base}/api/time    {"epoch": <utc秒>}
+ *   POST {base}/api/wifi    {"ssid": "...", "password": "..."}（保存后异步重连）
+ * ===================================================================== */
+
+/* ---------------- 常量与默认配置 ---------------- */
+var MAX_POINTS = 8;
+var DAY_SECONDS = 86400;
+var TIME_RE = /^([01]\d|2[0-3]):[0-5]\d$/; // HH:MM 合法性
+var LS_BASE = "multitimer.base";           // 本机记住的时钟地址
+var LS_NAMES = "multitimer.names";         // 仅本地的时间点备注 {HH:MM: name}
+var TIME_SYNC_THRESHOLD = 60;              // 加载后时钟偏差超过该秒数即自动对时
+var TIME_VALID_EPOCH = 1700000000;         // 早于 2023-11 视为 RTC 未同步
+var WIFI_OFFLINE_TIP = "切换 WiFi 后设备会短暂离线，请连接新网络后重新打开本页";
+
+function defaultConfig() {
+  return {
+    tzOffset: 8,
+    warnSeconds: 10,
+    colors: { countdown: "#00FF00", warning: "#FF2020", countup: "#0080FF" },
+    points: []
+  };
+}
+
+/* 全局运行状态 */
+var state = {
+  config: defaultConfig(),
+  follow: true,        // 是否实时跟随（UTC + tzOffset）
+  playing: false,      // 手动模式下是否播放
+  speed: 1,            // 播放倍速
+  sim: 0,              // 手动模式下的模拟时间（时钟本地当天秒数，可为小数）
+  showErrors: false,   // 保存校验失败后高亮错误行
+  device: null,        // 最近一次 GET /api/config 返回的 device 对象
+  calibratedUtc: 0     // 自动对时成功后的设备 UTC 秒；0 表示仍按 device.timeUtc 展示
+};
+var busy = false;
+var wifiSaving = false;    // WiFi 保存请求进行中
+var timeSyncing = false;   // 手动对时请求进行中
+var wifiSsidEdited = false; // 用户改过 SSID 后，设备刷新不再覆盖输入框
+var autoSyncDone = false; // 首次成功加载后只自动对时一次
+
+/* ---------------- DOM 引用 ---------------- */
+var $ = function (id) { return document.getElementById(id); };
+var baseInput = $("baseInput"), reloadBtn = $("reloadBtn"), deviceInfo = $("deviceInfo");
+var netSsid = $("netSsid"), netIp = $("netIp");
+var wifiSsidInput = $("wifiSsidInput"), wifiPassInput = $("wifiPassInput");
+var wifiSaveBtn = $("wifiSaveBtn"), timeSyncBtn = $("timeSyncBtn");
+var pointList = $("pointList"), addPointBtn = $("addPointBtn");
+var colorCountdown = $("colorCountdown"), colorWarning = $("colorWarning"),
+    colorCountup = $("colorCountup"), warnInput = $("warnInput"), tzInput = $("tzInput");
+var hexCountdown = $("hexCountdown"), hexWarning = $("hexWarning"), hexCountup = $("hexCountup");
+var saveBtn = $("saveBtn");
+var statusLog = $("statusLog");
+var followChk = $("followChk"), manualBox = $("manualBox");
+var simTime = $("simTime"), simSlider = $("simSlider"), playBtn = $("playBtn"), speedSel = $("speedSel");
+var canvas = $("led"), ctx = canvas.getContext("2d"), stageText = $("stageText");
+
+/* ---------------- 小工具 ---------------- */
+function pad2(n) { return (n < 10 ? "0" : "") + n; }
+
+/* 浏览器当前 UTC 秒（与设备 timeUtc 同一口径） */
+function browserEpoch() { return Math.floor(Date.now() / 1000); }
+
+/* localStorage 在隐私模式 / file:// 下可能抛错，统一兜底 */
+function lsGet(key) {
+  try { return window.localStorage.getItem(key); } catch (e) { return null; }
+}
+function lsSet(key, val) {
+  try { window.localStorage.setItem(key, val); } catch (e) { /* 忽略 */ }
+}
+
+/* 时间点备注：只存在浏览器本地，按 HH:MM 关联 */
+var namesMap = {};
+function loadNames() {
+  try {
+    var o = JSON.parse(lsGet(LS_NAMES) || "{}");
+    if (o && typeof o === "object") return o;
+  } catch (e) { /* 损坏则丢弃 */ }
+  return {};
+}
+function saveNames() { lsSet(LS_NAMES, JSON.stringify(namesMap)); }
+function pointName(t) {
+  var n = namesMap[t];
+  return typeof n === "string" ? n : "";
+}
+function setPointName(t, name) {
+  if (name) namesMap[t] = name;
+  else delete namesMap[t];
+  saveNames();
+}
+namesMap = loadNames();
+
+/* 秒数 -> HH:MM:SS（说明文字用；不超过一天） */
+function fmtHMS(sec) {
+  sec = Math.max(0, Math.floor(sec)) % DAY_SECONDS;
+  var h = Math.floor(sec / 3600);
+  var m = Math.floor((sec % 3600) / 60);
+  var s = sec % 60;
+  return pad2(h) + ":" + pad2(m) + ":" + pad2(s);
+}
+
+/* 设备屏实际显示格式（与固件 formatPanel 完全一致）：
+   始终 HH:MM:SS，不足 1 小时也保留 00 时；正计时/倒计时都不加 "+" */
+function fmtPanel(sec) {
+  sec = Math.max(0, Math.floor(sec)) % DAY_SECONDS;
+  var h = pad2(Math.floor(sec / 3600));
+  var ms = pad2(Math.floor((sec % 3600) / 60));
+  var ss = pad2(sec % 60);
+  return h + ":" + ms + ":" + ss;
+}
+
+/* "HH:MM" -> 秒数；非法返回 null */
+function timeToSeconds(str) {
+  if (typeof str !== "string" || !TIME_RE.test(str)) return null;
+  var p = str.split(":");
+  return parseInt(p[0], 10) * 3600 + parseInt(p[1], 10) * 60;
+}
+
+/* #RRGGBB -> {r,g,b} */
+function hexToRgb(hex) {
+  var m = /^#?([0-9a-f]{6})$/i.exec((hex || "").trim());
+  if (!m) return { r: 255, g: 255, b: 255 };
+  var v = parseInt(m[1], 16);
+  return { r: (v >> 16) & 255, g: (v >> 8) & 255, b: v & 255 };
+}
+function rgbToHex(c) {
+  var h = function (v) { return pad2(Math.max(0, Math.min(255, Math.round(v))).toString(16)); };
+  return ("#" + h(c.r) + h(c.g) + h(c.b)).toUpperCase();
+}
+/* 两色按 t(0~1) 混合 */
+function mixRgb(a, b, t) {
+  return { r: a.r + (b.r - a.r) * t, g: a.g + (b.g - a.g) * t, b: a.b + (b.b - a.b) * t };
+}
+
+/* ========================================================================
+ * 时钟地址：默认页面同源；file:// 打开时为空、需手填
+ * ======================================================================== */
+function defaultBase() {
+  if (window.location.protocol === "http:" || window.location.protocol === "https:") {
+    return window.location.origin;
+  }
+  return "";
+}
+function getBase() {
+  return (baseInput.value || "").trim().replace(/\/+$/, "");
+}
+baseInput.addEventListener("change", function () { lsSet(LS_BASE, getBase()); });
+
+/* ========================================================================
+ * 状态条：记录每一步操作结果；错误明细用等宽字体完整展示
+ * ======================================================================== */
+function addStatus(kind, title, detail) {
+  var item = document.createElement("div");
+  item.className = "status-item " + kind;
+  var head = document.createElement("div");
+  head.className = "head";
+  var dot = document.createElement("span"); dot.className = "dot";
+  var t = document.createElement("span"); t.className = "t"; t.textContent = title;
+  var ts = document.createElement("span"); ts.className = "ts";
+  var now = new Date();
+  ts.textContent = pad2(now.getHours()) + ":" + pad2(now.getMinutes()) + ":" + pad2(now.getSeconds());
+  head.appendChild(dot); head.appendChild(t); head.appendChild(ts);
+  item.appendChild(head);
+  if (detail) {
+    var pre = document.createElement("pre");
+    pre.textContent = typeof detail === "string" ? detail : JSON.stringify(detail, null, 2);
+    item.appendChild(pre);
+  }
+  statusLog.appendChild(item);
+  while (statusLog.children.length > 15) statusLog.removeChild(statusLog.firstChild);
+  /* 不要 scrollIntoView：首次加载的状态提示会把整页从顶部滚到底部，
+     用户看不到标题/连接卡/LED 模拟器。状态区固定在页面底部，用户需要时自行查看。 */
+}
+
+/* ---------------- busy 防重复提交 ---------------- */
+function refreshBusy() {
+  var btns = document.querySelectorAll("[data-busy]");
+  for (var i = 0; i < btns.length; i++) btns[i].disabled = busy;
+}
+
+/* ---------------- fetch 封装（直连时钟，统一处理网络异常） ---------------- */
+function api(method, path, body) {
+  var base = getBase();
+  if (!base) return Promise.reject(new Error("未填写时钟地址"));
+  var opt = { method: method, headers: {} };
+  if (body !== undefined) {
+    opt.headers["Content-Type"] = "application/json";
+    opt.body = JSON.stringify(body);
+  }
+  return fetch(base + path, opt).then(function (res) {
+    return res.json().catch(function () { return null; }).then(function (data) {
+      return { status: res.status, data: data };
+    });
+  });
+}
+
+/* ========================================================================
+ * 时间点列表渲染与编辑（最多 8 行，可排序/启停/删除）
+ * name 仅浏览器本地备注，不参与提交。
+ * ======================================================================== */
+function renderPoints() {
+  pointList.innerHTML = "";
+  state.config.points.forEach(function (p, idx) {
+    var row = document.createElement("div");
+    row.className = "point-row" + (p.enabled ? "" : " off");
+
+    /* 第一行：启用开关 / 时间 / 上移 / 下移 / 删除 */
+    var line1 = document.createElement("div");
+    line1.className = "point-line1";
+
+    var sw = document.createElement("label");
+    sw.className = "switch";
+    var cb = document.createElement("input");
+    cb.type = "checkbox"; cb.checked = !!p.enabled;
+    cb.addEventListener("change", function () {
+      state.config.points[idx].enabled = cb.checked;
+      row.className = "point-row" + (cb.checked ? "" : " off");
+    });
+    var track = document.createElement("span"); track.className = "track";
+    sw.appendChild(cb); sw.appendChild(track);
+
+    var ti = document.createElement("input");
+    ti.type = "time"; ti.value = p.time || "";
+    if (state.showErrors && !TIME_RE.test(p.time || "")) ti.className = "invalid-t";
+    ti.addEventListener("input", function () {
+      state.config.points[idx].time = ti.value;
+      ti.className = TIME_RE.test(ti.value || "") ? "" : "invalid-t";
+    });
+
+    var upBtn = document.createElement("button");
+    upBtn.type = "button"; upBtn.className = "icon-btn"; upBtn.textContent = "▲";
+    upBtn.disabled = (idx === 0);
+    upBtn.addEventListener("click", function () { movePoint(idx, -1); });
+
+    var downBtn = document.createElement("button");
+    downBtn.type = "button"; downBtn.className = "icon-btn"; downBtn.textContent = "▼";
+    downBtn.disabled = (idx === state.config.points.length - 1);
+    downBtn.addEventListener("click", function () { movePoint(idx, 1); });
+
+    var delBtn = document.createElement("button");
+    delBtn.type = "button"; delBtn.className = "icon-btn p-del"; delBtn.textContent = "✕";
+    delBtn.addEventListener("click", function () {
+      state.config.points.splice(idx, 1);
+      renderPoints();
+    });
+
+    line1.appendChild(sw); line1.appendChild(ti);
+    var spacer = document.createElement("span"); spacer.className = "grow";
+    line1.appendChild(spacer);
+    line1.appendChild(upBtn); line1.appendChild(downBtn); line1.appendChild(delBtn);
+
+    /* 第二行：本地备注（不落时钟） */
+    var line2 = document.createElement("div");
+    line2.className = "point-line2";
+    var ni = document.createElement("input");
+    ni.type = "text"; ni.value = pointName(p.time || "");
+    ni.placeholder = "备注名称（仅本浏览器保存，如：主题演讲）";
+    ni.maxLength = 24;
+    ni.addEventListener("input", function () {
+      setPointName(state.config.points[idx].time || "", ni.value);
+    });
+    ti.addEventListener("change", function () { ni.value = pointName(ti.value || ""); });
+    line2.appendChild(ni);
+
+    row.appendChild(line1); row.appendChild(line2);
+    pointList.appendChild(row);
+  });
+  addPointBtn.disabled = state.config.points.length >= MAX_POINTS;
+}
+
+function movePoint(idx, delta) {
+  var j = idx + delta;
+  if (j < 0 || j >= state.config.points.length) return;
+  var arr = state.config.points;
+  var tmp = arr[idx]; arr[idx] = arr[j]; arr[j] = tmp;
+  renderPoints();
+}
+
+addPointBtn.addEventListener("click", function () {
+  if (state.config.points.length >= MAX_POINTS) return;
+  state.config.points.push({ time: "", enabled: true });
+  renderPoints();
+});
+
+/* ========================================================================
+ * 外观卡表单 -> 实时同步到 state（模拟器即时反映，无需保存）
+ * ======================================================================== */
+function bindColor(input, hexLabel, key) {
+  function sync() {
+    state.config.colors[key] = input.value.toUpperCase();
+    hexLabel.textContent = input.value.toUpperCase();
+  }
+  input.addEventListener("input", sync);
+  sync();
+}
+bindColor(colorCountdown, hexCountdown, "countdown");
+bindColor(colorWarning, hexWarning, "warning");
+bindColor(colorCountup, hexCountup, "countup");
+
+tzInput.addEventListener("input", function () {
+  var v = parseInt(tzInput.value, 10);
+  if (isFinite(v)) state.config.tzOffset = Math.max(-12, Math.min(14, v));
+});
+tzInput.addEventListener("blur", function () {
+  var v = parseInt(tzInput.value, 10);
+  if (!isFinite(v) || v < -12) v = -12;
+  if (v > 14) v = 14;
+  tzInput.value = v; state.config.tzOffset = v;
+});
+
+warnInput.addEventListener("input", function () {
+  var v = parseInt(warnInput.value, 10);
+  if (isFinite(v)) state.config.warnSeconds = Math.max(0, Math.min(600, v));
+});
+warnInput.addEventListener("blur", function () {
+  var v = parseInt(warnInput.value, 10);
+  if (!isFinite(v) || v < 0) v = 0;
+  if (v > 600) v = 600;
+  warnInput.value = v; state.config.warnSeconds = v;
+});
+
+/* ========================================================================
+ * 设备信息展示（GET /api/config 返回的 device 字段）
+ * ======================================================================== */
+function fmtUptime(sec) {
+  sec = parseInt(sec, 10);
+  if (!isFinite(sec) || sec < 0) return "未知";
+  var d = Math.floor(sec / 86400), h = Math.floor((sec % 86400) / 3600),
+      m = Math.floor((sec % 3600) / 60);
+  if (d > 0) return d + " 天 " + h + " 小时";
+  if (h > 0) return h + " 小时 " + m + " 分";
+  return m + " 分 " + (sec % 60) + " 秒";
+}
+/* UTC epoch + tzOffset 后按日历展示（用 UTC 取值器手工偏移） */
+function fmtClockLocal(epoch, tz) {
+  var n = parseInt(epoch, 10);
+  if (!isFinite(n) || n <= 0) return "未知";
+  var d = new Date((n + tz * 3600) * 1000);
+  return d.getUTCFullYear() + "-" + pad2(d.getUTCMonth() + 1) + "-" + pad2(d.getUTCDate()) +
+         " " + pad2(d.getUTCHours()) + ":" + pad2(d.getUTCMinutes()) + ":" + pad2(d.getUTCSeconds());
+}
+function addDeviceLine(k, v) {
+  var line = document.createElement("div");
+  line.className = "dline";
+  var ks = document.createElement("span"); ks.className = "k"; ks.textContent = k;
+  var vs = document.createElement("span"); vs.className = "v"; vs.textContent = v;
+  line.appendChild(ks); line.appendChild(vs);
+  deviceInfo.appendChild(line);
+}
+/* 设备报出的时间早于 2023-11，说明 RTC 尚未同步 */
+function isDeviceTimeUnsynced(device) {
+  var t = parseInt(device && device.timeUtc, 10);
+  return isFinite(t) && t < TIME_VALID_EPOCH;
+}
+
+/* 网络卡只读信息：当前 SSID / IP；SSID 非空时自动回填输入框 */
+function renderNetwork(device) {
+  var ssid = (device && typeof device.ssid === "string") ? device.ssid.trim() : "";
+  var ip = (device && device.ip) ? String(device.ip).trim() : "";
+  netSsid.textContent = ssid || "未连接/未知";
+  netIp.textContent = ip || "未知";
+  if (ssid && !wifiSsidEdited) {
+    wifiSsidInput.value = ssid;
+  }
+}
+wifiSsidInput.addEventListener("input", function () { wifiSsidEdited = true; });
+
+function renderDevice(device, errMsg) {
+  renderNetwork(device);
+  deviceInfo.innerHTML = "";
+  deviceInfo.style.display = "block";
+  var bad = !!errMsg;
+  if (device) {
+    addDeviceLine("IP 地址", device.ip || "未知");
+    addDeviceLine("WiFi", device.wifi ? "已连接" : "未连接 / 未知");
+    if (typeof device.ssid === "string" && device.ssid.trim() !== "") {
+      addDeviceLine("WiFi 名称", device.ssid.trim());
+    }
+    addDeviceLine("运行时长", fmtUptime(device.uptimeSec));
+    var tz = state.config.tzOffset;
+    var rawUtc = parseInt(device.timeUtc, 10);
+    var shownUtc = state.calibratedUtc > 0 ? state.calibratedUtc : rawUtc;
+    var unsynced = state.calibratedUtc <= 0 && isDeviceTimeUnsynced(device);
+    var timeText = fmtClockLocal(shownUtc, tz) +
+        "（UTC" + (tz >= 0 ? "+" : "") + tz + "）";
+    if (unsynced) {
+      timeText += " · 未同步";
+      bad = true;
+    }
+    addDeviceLine("设备时间", timeText);
+  } else {
+    addDeviceLine("提示", errMsg || "暂无设备信息");
+  }
+  deviceInfo.className = bad ? "bad" : "";
+}
+
+/* ========================================================================
+ * 首次加载成功后的静默对时：设备时间与浏览器偏差超过 60 秒才补发时间。
+ * 成功提示并刷新设备时间；失败只留轻提示，绝不打断页面其他功能。
+ * ======================================================================== */
+function autoCalibrateDeviceTime(device) {
+  var devUtc = parseInt(device && device.timeUtc, 10);
+  if (!isFinite(devUtc)) return Promise.resolve(false);
+  var now = browserEpoch();
+  var diff = now - devUtc;
+  if (Math.abs(diff) <= TIME_SYNC_THRESHOLD) return Promise.resolve(false);
+
+  return api("POST", "/api/time", { epoch: now }).then(function (r) {
+    if (r && r.status >= 200 && r.status < 300 && r.data && r.data.ok) {
+      state.calibratedUtc = now;
+      renderDevice(state.device, null);
+      addStatus("ok", "已自动校准时钟时间（偏差 " + Math.abs(diff) + " 秒）");
+      return true;
+    }
+    addStatus("info", "自动校准时钟失败，可在保存配置时重试");
+    return false;
+  }).catch(function () {
+    addStatus("info", "自动校准时钟失败，可在保存配置时重试");
+    return false;
+  });
+}
+
+/* ========================================================================
+ * 首次加载：GET /api/config 填充配置与设备信息；网络失败则使用默认配置
+ * ======================================================================== */
+function applyConfig(c) {
+  var d = defaultConfig();
+  if (c && typeof c === "object") {
+    if (typeof c.tzOffset === "number" && isFinite(c.tzOffset) &&
+        c.tzOffset >= -12 && c.tzOffset <= 14) {
+      d.tzOffset = c.tzOffset;
+    }
+    if (typeof c.warnSeconds === "number" && isFinite(c.warnSeconds) &&
+        c.warnSeconds >= 0 && c.warnSeconds <= 600) {
+      d.warnSeconds = c.warnSeconds;
+    }
+    if (c.colors) {
+      ["countdown", "warning", "countup"].forEach(function (k) {
+        if (/^#?[0-9a-f]{6}$/i.test(c.colors[k] || "")) {
+          d.colors[k] = c.colors[k].toUpperCase();
+          if (d.colors[k][0] !== "#") d.colors[k] = "#" + d.colors[k];
+        }
+      });
+    }
+    if (Array.isArray(c.points)) {
+      d.points = c.points.slice(0, MAX_POINTS).map(function (p) {
+        var time = (p && typeof p.time === "string") ? p.time : "";
+        return {
+          time: time,
+          enabled: p ? p.enabled !== false : true,
+          name: pointName(time)
+        };
+      });
+    }
+  }
+  state.config = d;
+
+  tzInput.value = d.tzOffset;
+  colorCountdown.value = d.colors.countdown;
+  colorWarning.value = d.colors.warning;
+  colorCountup.value = d.colors.countup;
+  hexCountdown.textContent = d.colors.countdown.toUpperCase();
+  hexWarning.textContent = d.colors.warning.toUpperCase();
+  hexCountup.textContent = d.colors.countup.toUpperCase();
+  warnInput.value = d.warnSeconds;
+  state.showErrors = false;
+  renderPoints();
+}
+
+function loadConfig() {
+  var base = getBase();
+  state.device = null;
+  state.calibratedUtc = 0;
+  if (!base) {
+    applyConfig(null);
+    renderDevice(null, "未设置时钟地址，请填写后点“重新加载”（例：http://192.168.8.219:8080）");
+    return Promise.resolve();
+  }
+  return api("GET", "/api/config").then(function (r) {
+    if (r.data && r.data.ok && r.data.config) {
+      applyConfig(r.data.config);
+      state.device = r.data.device || null;
+      state.calibratedUtc = 0;
+      renderDevice(state.device, null);
+      addStatus("ok", "已加载时钟配置（" + base + "）");
+      if (isDeviceTimeUnsynced(state.device)) {
+        addStatus("err", "设备时间未同步（早于 2023-11）",
+            "请保存一次配置以对时，或检查网络后重新加载。");
+      }
+      /* 仅首次成功加载时自动对时，避免保存回拉等场景重复发请求 */
+      if (!autoSyncDone) {
+        autoSyncDone = true;
+        return autoCalibrateDeviceTime(state.device);
+      }
+      return null;
+    }
+    applyConfig(null);
+    renderDevice(null, "配置接口返回异常（HTTP " + r.status + "）");
+    addStatus("err", "配置接口返回异常", r.data ? JSON.stringify(r.data) : "无响应体");
+    return null;
+  }).catch(function (e) {
+    applyConfig(null);
+    var msg = String((e && e.message) || e);
+    renderDevice(null, "无法连接时钟：" + msg);
+    addStatus("err", "无法连接时钟加载配置，已使用默认值（模拟器仍可离线使用）", msg);
+  });
+}
+
+reloadBtn.addEventListener("click", function () {
+  if (busy) return;
+  lsSet(LS_BASE, getBase());
+  busy = true; refreshBusy();
+  loadConfig().then(function () { busy = false; refreshBusy(); });
+});
+
+/* ========================================================================
+ * 保存：POST /api/config（严格按固件 schema，剥离 name）；
+ * 成功后热生效，再 POST /api/time 做对时保险（失败静默忽略）。
+ * ======================================================================== */
+function validateForm() {
+  var errs = [];
+  var tz = parseInt(tzInput.value, 10);
+  if (!isFinite(tz) || tz < -12 || tz > 14) {
+    errs.push("时区需为 -12 到 14 的整数（UTC 偏移，中国=8）");
+  }
+  var warn = parseInt(warnInput.value, 10);
+  if (!isFinite(warn) || warn < 0 || warn > 600) {
+    errs.push("预警秒数需为 0 到 600 的整数");
+  }
+  ["countdown", "warning", "countup"].forEach(function (k) {
+    var input = k === "countdown" ? colorCountdown : (k === "warning" ? colorWarning : colorCountup);
+    if (!/^#[0-9a-f]{6}$/i.test(input.value || "")) {
+      errs.push("颜色格式无效：" + k);
+    }
+  });
+  if (state.config.points.length > MAX_POINTS) {
+    errs.push("时间点最多 " + MAX_POINTS + " 个");
+  }
+  state.config.points.forEach(function (p, i) {
+    if (!TIME_RE.test(p.time || "")) {
+      errs.push("第 " + (i + 1) + " 个时间点无效，时间必填且为 HH:MM");
+    }
+  });
+  return errs;
+}
+
+/* 收集提交体：仅固件 schema 字段，name 备注一律剥离 */
+function buildPayload() {
+  return {
+    tzOffset: parseInt(tzInput.value, 10),
+    warnSeconds: parseInt(warnInput.value, 10),
+    colors: {
+      countdown: colorCountdown.value.toUpperCase(),
+      warning: colorWarning.value.toUpperCase(),
+      countup: colorCountup.value.toUpperCase()
+    },
+    points: state.config.points.map(function (p) {
+      return { time: p.time, enabled: !!p.enabled };
+    })
+  };
+}
+
+saveBtn.addEventListener("click", function () {
+  if (busy) return;
+
+  state.showErrors = true;
+  renderPoints();
+  var errs = validateForm();
+  if (errs.length) {
+    addStatus("err", "保存中止：请修正以下问题", errs.map(function (x) { return "• " + x; }).join("\n"));
+    return;
+  }
+
+  var payload = buildPayload();
+  var base = getBase();
+  saveNames();
+  busy = true; refreshBusy();
+  api("POST", "/api/config", payload).then(function (r) {
+    if (r.status >= 200 && r.status < 300 && r.data && r.data.ok) {
+      addStatus("ok", "配置已保存，时钟已热生效");
+      /* 对时保险：失败静默，不影响保存结果 */
+      return api("POST", "/api/time", { epoch: Math.floor(Date.now() / 1000) })
+        .catch(function () { return null; })
+        .then(function () { return loadConfig(); });
+    }
+    var msg = (r.data && r.data.error) ? String(r.data.error)
+        : ("HTTP " + r.status + (r.data ? "：" + JSON.stringify(r.data) : "（无响应体）"));
+    addStatus("err", "保存失败", msg);
+    return null;
+  }).catch(function (e) {
+    addStatus("err", "保存失败：网络错误", String((e && e.message) || e));
+  }).then(function () { busy = false; refreshBusy(); });
+});
+
+/* ========================================================================
+ * 网络与手动对时
+ * 密码只在内存中随本次 POST 提交；不写 localStorage，也不回显到状态条。
+ * ======================================================================== */
+function responseError(r) {
+  if (r && r.data && r.data.error) return String(r.data.error);
+  if (!r) return "无响应";
+  return "HTTP " + r.status +
+      (r.data ? "：" + JSON.stringify(r.data) : "（无响应体）");
+}
+
+wifiSaveBtn.addEventListener("click", function () {
+  if (wifiSaving) return;
+
+  var ssid = (wifiSsidInput.value || "").trim();
+  if (!ssid) {
+    addStatus("err", "保存 WiFi 中止：WiFi 名称不能为空");
+    wifiSsidInput.focus();
+    return;
+  }
+  if (!window.confirm(WIFI_OFFLINE_TIP)) return;
+
+  var password = wifiPassInput.value || ""; // 保留用户输入的空格，不 trim
+  wifiSaving = true;
+  wifiSaveBtn.disabled = true;
+  addStatus("info", "正在保存 WiFi 设置…");
+  api("POST", "/api/wifi", { ssid: ssid, password: password }).then(function (r) {
+    if (r.status >= 200 && r.status < 300 && r.data && r.data.ok) {
+      wifiPassInput.value = ""; // 成功后立即丢弃明文密码
+      addStatus("ok", "已保存，设备正在重连…",
+          "请连接新的 WiFi 后重新打开本页。");
+      return;
+    }
+    addStatus("err", "保存 WiFi 失败", responseError(r));
+  }).catch(function (e) {
+    addStatus("err", "保存 WiFi 失败：网络错误", String((e && e.message) || e));
+  }).then(function () {
+    wifiSaving = false;
+    wifiSaveBtn.disabled = false;
+  });
+});
+
+timeSyncBtn.addEventListener("click", function () {
+  if (timeSyncing) return;
+
+  var epoch = Math.floor(Date.now() / 1000);
+  timeSyncing = true;
+  timeSyncBtn.disabled = true;
+  api("POST", "/api/time", { epoch: epoch }).then(function (r) {
+    if (r.status >= 200 && r.status < 300 && r.data && r.data.ok) {
+      state.calibratedUtc = epoch;
+      renderDevice(state.device, null);
+      addStatus("ok", "设备时间已校准");
+      return;
+    }
+    addStatus("info", "对时失败：" + responseError(r));
+  }).catch(function (e) {
+    addStatus("info", "对时失败：" + String((e && e.message) || e));
+  }).then(function () {
+    timeSyncing = false;
+    timeSyncBtn.disabled = false;
+  });
+});
+
+/* ========================================================================
+ * 52 x 16 LED 模拟器
+ * 阶段规则与固件 TimerEngine / TimerPage 完全对齐：
+ *   EMPTY        --:--                 #404040
+ *   BEFORE_FIRST 倒计时(绿)            首个点之前，不预警
+ *   COUNTDOWN    倒计时(绿) / 预警(红)      预警期常亮红色，不闪烁
+ *   COUNTUP      +正计时(蓝)           过最后一个点
+ * ===================================================================== */
+var COLS = 52, ROWS = 16;
+var SUP = 6;                         // 离屏超采样倍数：312 x 96
+var offCanvas = document.createElement("canvas");
+offCanvas.width = COLS * SUP; offCanvas.height = ROWS * SUP;
+var offCtx = offCanvas.getContext("2d");
+var coverage = null;                 // 当前文字的灯珠覆盖率数组（长度 832）
+var coverageText = null;
+var blankCoverage = new Array(COLS * ROWS + 1).join("0").split("").map(function () { return 0; });
+var ledLayout = { cell: 8, w: COLS * 8, h: ROWS * 8 };
+var UNLIT = { r: 24, g: 27, b: 35 }; // 未点亮灯珠：深灰
+var EMPTY_HEX = "#404040";           // 与固件 COLOR_EMPTY 一致
+
+/* 根据显示文字生成 52x16 覆盖率矩阵（文字改变时才重算） */
+function buildCoverage(text) {
+  if (coverageText === text && coverage) return coverage;
+  var W = COLS * SUP, H = ROWS * SUP;
+  offCtx.clearRect(0, 0, W, H);
+  /* 自适应字号：在不超过点阵宽高的前提下尽量大、字距紧凑 */
+  var fs = H * 0.98;
+  do {
+    offCtx.font = "bold " + fs + "px ui-monospace, Menlo, Consolas, monospace";
+    if (offCtx.measureText(text).width <= W * 0.985) break;
+    fs -= 1;
+  } while (fs > 6);
+  offCtx.textBaseline = "middle";
+  offCtx.textAlign = "center";
+  offCtx.fillStyle = "#ffffff";
+  offCtx.fillText(text, W / 2, H / 2 + fs * 0.03);
+
+  var img = offCtx.getImageData(0, 0, W, H).data;
+  coverage = new Array(COLS * ROWS);
+  for (var y = 0; y < ROWS; y++) {
+    for (var x = 0; x < COLS; x++) {
+      var sum = 0;
+      for (var sy = 0; sy < SUP; sy++) {
+        for (var sx = 0; sx < SUP; sx++) {
+          var px = ((y * SUP + sy) * W + (x * SUP + sx)) * 4;
+          sum += img[px + 3]; // Alpha 通道
+        }
+      }
+      coverage[y * COLS + x] = sum / (SUP * SUP * 255);
+    }
+  }
+  coverageText = text;
+  return coverage;
+}
+
+/* canvas 按容器宽度 + devicePixelRatio 适配，保证清晰 */
+function resizeCanvas() {
+  var avail = canvas.parentElement.clientWidth - 14; // 减去内边距
+  var cell = Math.min(avail / COLS, 9);             // 灯珠直径：屏宽自适应，最大约 9px
+  if (!isFinite(cell) || cell <= 0) cell = 8;
+  var w = cell * COLS, h = cell * ROWS;
+  var dpr = Math.min(window.devicePixelRatio || 1, 3);
+  canvas.style.width = w + "px";
+  canvas.style.height = h + "px";
+  canvas.width = Math.round(w * dpr);
+  canvas.height = Math.round(h * dpr);
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  ledLayout = { cell: cell, w: w, h: h };
+}
+window.addEventListener("resize", resizeCanvas);
+
+/* 当前时钟本地时间（一天内秒数，0 ~ 86399.xxx）。
+   跟随模式与固件一致：local = floor(Date.now()/1000) + tzOffset*3600，再对一天取模。
+   手动模式下拨杆直接表示时钟本地时间，不再做时区换算。 */
+function currentSim() {
+  if (state.follow) {
+    var tz = state.config.tzOffset || 0;
+    var ms = Date.now();
+    var sec = Math.floor(ms / 1000) + tz * 3600;
+    var frac = (ms % 1000) / 1000;
+    return (((sec % DAY_SECONDS) + DAY_SECONDS) % DAY_SECONDS) + frac;
+  }
+  return state.sim;
+}
+
+/*
+ * 计算当前这一帧应显示的内容，严格复刻 TimerEngine::evaluate：
+ *  - 取启用且时间合法的点，升序并去重（与固件 mDaySeconds 一致）；
+ *  - nowOfDay < first   -> BEFORE_FIRST，倒计时绿色，不预警；
+ *  - nowOfDay >= last   -> COUNTUP，自最后点正计时；
+ *  - 其余               -> COUNTDOWN 向下一个点倒计时，
+ *                          remain<=warnSeconds 时预警：偶数本地秒红、奇数本地秒整屏黑；
+ *  - 没有有效点         -> EMPTY，--:-- 暗灰。
+ */
+function computeFrame() {
+  var raw = [];
+  state.config.points.forEach(function (p) {
+    if (!p.enabled) return;
+    var t = timeToSeconds(p.time);
+    if (t === null) return;
+    raw.push({ t: t, time: p.time, name: pointName(p.time) });
+  });
+  raw.sort(function (a, b) { return a.t - b.t; });
+  var pts = [];
+  raw.forEach(function (p) {
+    if (!pts.length || pts[pts.length - 1].t !== p.t) pts.push(p);
+  });
+
+  var nowOfDay = Math.floor(currentSim());
+  if (pts.length === 0) {
+    return { text: "--:--", hex: EMPTY_HEX, label: "空配置：屏幕显示 --:--", blank: false, kind: "EMPTY" };
+  }
+
+  var first = pts[0], last = pts[pts.length - 1];
+  var rem, label;
+
+  if (nowOfDay < first.t) {
+    rem = first.t - nowOfDay;
+    label = "等待今日首个时间点 " + first.time +
+            (first.name ? "（" + first.name + "）" : "") + "，剩余 " + fmtHMS(rem);
+    return { text: fmtPanel(rem), hex: state.config.colors.countdown,
+             label: label, blank: false, kind: "BEFORE_FIRST" };
+  }
+
+  if (nowOfDay >= last.t) {
+    rem = nowOfDay - last.t;
+    label = "正计时（自 " + last.time + (last.name ? "（" + last.name + "）" : "") +
+            "）" + fmtHMS(rem);
+    return { text: fmtPanel(rem), hex: state.config.colors.countup,
+             label: label, blank: false, kind: "COUNTUP" };
+  }
+
+  for (var i = 1; i < pts.length; i++) {
+    if (nowOfDay < pts[i].t) {
+      var target = pts[i];
+      rem = target.t - nowOfDay;
+      var isWarn = rem <= state.config.warnSeconds;
+      if (isWarn) {
+        label = "预警！距 " + target.time +
+                (target.name ? "（" + target.name + "）" : "") + " 仅剩 " + fmtHMS(rem) +
+                "（红色）";
+        return { text: fmtPanel(rem),
+                 hex: state.config.colors.warning,
+                 label: label, blank: false, kind: "COUNTDOWN" };
+      }
+      label = "距 " + target.time + (target.name ? "（" + target.name + "）" : "") +
+              " 还有 " + fmtHMS(rem);
+      return { text: fmtPanel(rem), hex: state.config.colors.countdown,
+               label: label, blank: false, kind: "COUNTDOWN" };
+    }
+  }
+
+  /* 理论不可达 */
+  return { text: "--:--", hex: EMPTY_HEX, label: "空配置：屏幕显示 --:--",
+           blank: false, kind: "EMPTY" };
+}
+
+/* 绘制一帧 LED 点阵 */
+function drawFrame(f) {
+  var cell = ledLayout.cell;
+  var r = cell * 0.43;                 // 灯珠半径（黑色间隙约 0.14cell）
+  var cov = f.blank ? blankCoverage : buildCoverage(f.text);
+  var target = hexToRgb(f.hex);
+
+  ctx.fillStyle = "#05070a";
+  ctx.fillRect(0, 0, ledLayout.w, ledLayout.h);
+
+  /* 第一遍：所有灯珠（未点亮深灰 + 覆盖率混色），不加发光，保证性能 */
+  for (var y = 0; y < ROWS; y++) {
+    for (var x = 0; x < COLS; x++) {
+      var c = cov[y * COLS + x];
+      var col = mixRgb(UNLIT, target, c);
+      ctx.fillStyle = "rgb(" + (col.r | 0) + "," + (col.g | 0) + "," + (col.b | 0) + ")";
+      ctx.beginPath();
+      ctx.arc((x + 0.5) * cell, (y + 0.5) * cell, r, 0, Math.PI * 2);
+      ctx.fill();
+    }
+  }
+  /* 黑屏帧 / 空覆盖：不再叠加发光 */
+  var hasLit = false;
+  for (var k = 0; k < cov.length; k++) {
+    if (cov[k] >= 0.55) { hasLit = true; break; }
+  }
+  if (hasLit) {
+    ctx.shadowColor = f.hex;
+    ctx.shadowBlur = cell * 0.55;
+    ctx.fillStyle = f.hex;
+    for (var i = 0; i < cov.length; i++) {
+      if (cov[i] < 0.55) continue;
+      var cx2 = (i % COLS + 0.5) * cell, cy2 = (Math.floor(i / COLS) + 0.5) * cell;
+      ctx.beginPath();
+      ctx.arc(cx2, cy2, r, 0, Math.PI * 2);
+      ctx.fill();
+    }
+    ctx.shadowBlur = 0;
+  }
+}
+
+/* ---------------- 模拟时钟控件 ---------------- */
+function setManualEnabled(on) {
+  manualBox.className = "sim-controls" + (on ? "" : " disabled-block");
+}
+
+followChk.addEventListener("change", function () {
+  if (followChk.checked) {
+    /* 切回实时：停止播放，sim 跟随时钟本地时间 */
+    state.follow = true;
+    state.playing = false;
+    playBtn.textContent = "▶ 播放";
+  } else {
+    /* 关闭跟瞬间冻结当前时钟本地时间，便于从当下开始推演 */
+    state.follow = false;
+    state.sim = currentSim();
+  }
+  setManualEnabled(!state.follow);
+});
+
+playBtn.addEventListener("click", function () {
+  if (state.follow) return;
+  state.playing = !state.playing;
+  playBtn.textContent = state.playing ? "⏸ 暂停" : "▶ 播放";
+});
+
+speedSel.addEventListener("change", function () {
+  state.speed = parseInt(speedSel.value, 10) || 1;
+});
+
+/* "HH:MM:SS" / "HH:MM" -> 秒 */
+function parseHMS(str) {
+  var parts = (str || "").split(":");
+  if (parts.length < 2) return null;
+  var h = parseInt(parts[0], 10), m = parseInt(parts[1], 10);
+  var s = parts.length >= 3 ? parseInt(parts[2], 10) : 0;
+  if (!isFinite(h) || !isFinite(m) || !isFinite(s)) return null;
+  return Math.max(0, Math.min(DAY_SECONDS - 1, h * 3600 + m * 60 + s));
+}
+
+simTime.addEventListener("change", function () {
+  var v = parseHMS(simTime.value);
+  if (v !== null) { state.sim = v; state.playing = false; playBtn.textContent = "▶ 播放"; }
+});
+simSlider.addEventListener("input", function () {
+  state.sim = parseInt(simSlider.value, 10) || 0;
+  state.playing = false; playBtn.textContent = "▶ 播放";
+});
+
+/* ---------------- 主循环：rAF，状态不变则跳过重绘 ---------------- */
+var lastTs = performance.now();
+var lastKey = "", lastLabel = "";
+
+function loop(ts) {
+  var dt = Math.min((ts - lastTs) / 1000, 0.25); // 切后台回来不跳跃
+  lastTs = ts;
+
+  if (!state.follow && state.playing) {
+    state.sim = (state.sim + dt * state.speed) % DAY_SECONDS; // 跨午夜回绕
+  }
+
+  var f = computeFrame();
+  var simFloor = Math.floor(currentSim());
+  var key = f.text + "|" + (f.blank ? "BLANK" : f.hex) + "|" + simFloor + "|" + ledLayout.w.toFixed(1);
+
+  /* 同步手动控件（用户正在操作的控件不覆盖） */
+  if (!state.follow) {
+    if (document.activeElement !== simTime) simTime.value = fmtHMS(simFloor);
+    if (document.activeElement !== simSlider) simSlider.value = simFloor;
+  }
+  if (f.label !== lastLabel) { stageText.textContent = f.label; lastLabel = f.label; }
+
+  if (key !== lastKey) { drawFrame(f); lastKey = key; }
+  requestAnimationFrame(loop);
+}
+
+/* ========================================================================
+ * 启动
+ * ======================================================================== */
+baseInput.value = lsGet(LS_BASE) || defaultBase();
+setManualEnabled(false);
+resizeCanvas();
+requestAnimationFrame(loop);
+loadConfig();
+</script>
+</body>
+</html>

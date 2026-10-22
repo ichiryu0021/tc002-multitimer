@@ -1,0 +1,149 @@
+﻿{
+  "ok": true,
+  "browser": "Edg/155.0.4283.62",
+  "loaded": true,
+  "emulation": {
+    "width": 390,
+    "height": 1200,
+    "mobile": true,
+    "deviceScaleFactor": 1
+  },
+  "viewport": {
+    "innerWidth": 390,
+    "innerHeight": 1200,
+    "devicePixelRatio": 1,
+    "visualViewportWidth": 390,
+    "scrollX": 0,
+    "scrollY": 0
+  },
+  "autoScroll": {
+    "readyAtMs": 226,
+    "finalScrollY": 0,
+    "finalMaxScrollY": 964,
+    "samples": [
+      {
+        "tMs": 61,
+        "scrollY": 0,
+        "maxScrollY": 535,
+        "ready": false
+      },
+      {
+        "tMs": 226,
+        "scrollY": 0,
+        "maxScrollY": 964,
+        "ready": true
+      },
+      {
+        "tMs": 1127,
+        "scrollY": 0,
+        "maxScrollY": 964,
+        "ready": true,
+        "settled": true
+      }
+    ]
+  },
+  "document": {
+    "clientWidth": 390,
+    "scrollWidth": 390,
+    "scrollHeight": 2164,
+    "bodyScrollWidth": 390,
+    "bodyScrollHeight": 2164,
+    "horizontalOverflow": false
+  },
+  "pointRows": 2,
+  "pointTimes": [
+    "16:17",
+    "16:18"
+  ],
+  "saveButton": {
+    "exists": true,
+    "text": "保存到时钟（热生效）",
+    "disabled": false,
+    "rect": {
+      "x": 27,
+      "y": 2025.4,
+      "left": 27,
+      "top": 2025.4,
+      "width": 336,
+      "height": 45,
+      "right": 363,
+      "bottom": 2070.4
+    },
+    "fullyVisibleHorizontally": true
+  },
+  "led": {
+    "canvasRect": {
+      "x": 34,
+      "y": 902.8,
+      "left": 34,
+      "top": 902.8,
+      "width": 322,
+      "height": 99.1,
+      "right": 356,
+      "bottom": 1001.8
+    },
+    "wrapRect": {
+      "x": 27,
+      "y": 895.8,
+      "left": 27,
+      "top": 895.8,
+      "width": 336,
+      "height": 118.8,
+      "right": 363,
+      "bottom": 1014.6
+    },
+    "wrapClientWidth": 336,
+    "wrapScrollWidth": 336,
+    "canvasWidthAttr": 322,
+    "canvasHeightAttr": 99,
+    "canvasStyle": {
+      "width": "322px",
+      "height": "99.0769px"
+    },
+    "fullyInsideWrap": true,
+    "aspectOk": true,
+    "pixels": {
+      "width": 322,
+      "height": 99,
+      "green": 0,
+      "red": 0,
+      "blue": 8349,
+      "lit": 5826,
+      "nonBackground": 26919
+    }
+  },
+  "deviceLines": [
+    "IP 地址 192.168.31.124",
+    "WiFi 已连接",
+    "WiFi 名称 JasonYiL",
+    "运行时长 5 天 0 小时",
+    "设备时间 2026-10-22 16:19:40（UTC+8）"
+  ],
+  "statusTexts": [
+    "已加载时钟配置（http://192.168.31.124:8080） 16:19:41"
+  ],
+  "stageText": "正计时（自 16:18）00:01:42",
+  "frame": {
+    "text": "00:01:42",
+    "hex": "#0080FF",
+    "label": "正计时（自 16:18）00:01:42",
+    "blank": false,
+    "kind": "COUNTUP"
+  },
+  "consoleEvents": 0,
+  "exceptions": 0,
+  "logEntries": 0,
+  "scrollScreenshot": {
+    "path": "D:\\Project\\ulanzi\\tests\\visual\\real-mobile-v2-initial.png"
+  },
+  "viewportScreenshot": {
+    "path": "D:\\Project\\ulanzi\\tests\\visual\\real-mobile-v2.png"
+  },
+  "fullPageScreenshot": {
+    "path": "D:\\Project\\ulanzi\\tests\\visual\\real-mobile-v2-full.png",
+    "width": 390,
+    "height": 2164
+  },
+  "saveStatuses": null,
+  "report": "D:\\Project\\ulanzi\\tests\\visual\\cdp-report-real-v2.json"
+}
