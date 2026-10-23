@@ -339,9 +339,21 @@ TF_TEST(renderer_datetime_page_shows_date_and_time) {
 	PageRenderer::drawTextCentered(expected,
 			formatEpochLocalTime(now, config.tzOffsetMinutes), 10, 2, 1,
 			config.colorClock);
-	PageRenderer::drawTextCentered(expected, formatDate(local), 15, 1, 0,
-			config.colorDim);
+	const int timeWidth = PageRenderer::measureText(
+			formatEpochLocalTime(now, config.tzOffsetMinutes), 2, 1);
+	const int dateX = (PageRenderer::kScreenWidth - timeWidth) / 2;
+	PageRenderer::drawTextSpread(expected, formatDate(local), dateX, timeWidth,
+			16, 1, config.colorDim);
 	TF_CHECK(surfacesEqual(surface, expected));
+
+	// 日期行与时间行同宽同起点，并整体下移 1px（行 11..15）
+	TF_EQ(timeWidth, 47);
+	TF_EQ(dateX, 2);
+	const Bounds dateBounds = litBounds(surface, 10, 15);
+	TF_EQ(dateBounds.minX, dateX);
+	TF_EQ(dateBounds.maxX, dateX + timeWidth - 1);
+	TF_EQ(dateBounds.minY, 11);
+	TF_EQ(dateBounds.maxY, 15);
 }
 
 TF_TEST(renderer_split_page_no_target_shows_no_countdown) {

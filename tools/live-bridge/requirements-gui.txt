@@ -1,0 +1,9 @@
+# TC002 桌面助手（源码运行 + 打包）依赖
+# 只跑命令行中继 bridge.py 时，仅需 requirements.txt
+-r requirements.txt
+
+# 单窗口 UI（Windows 使用系统 WebView2）
+pywebview>=5
+
+# 快手直播；有系统 Edge 即可，无需 playwright install chromium
+playwright>=1.40

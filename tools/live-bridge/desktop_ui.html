@@ -1,0 +1,1677 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>TC002 桌面助手</title>
+<style>
+  :root {
+    --bg: #070d18;
+    --bg2: #0b1424;
+    --card: #101b2e;
+    --card2: #0d1728;
+    --line: #1e2d47;
+    --text: #e6edf7;
+    --muted: #8fa3bf;
+    --accent: #3b82f6;
+    --accent2: #2563eb;
+    --green: #22c55e;
+    --red: #ef4444;
+    --amber: #f59e0b;
+    --radius: 12px;
+  }
+  * { box-sizing: border-box; }
+  html, body { height: 100%; }
+  body {
+    margin: 0;
+    background: radial-gradient(1200px 700px at 70% -10%, #12203a 0%, var(--bg) 55%);
+    color: var(--text);
+    font-family: "Microsoft YaHei UI", "Segoe UI", system-ui, sans-serif;
+    font-size: 13px;
+    overflow: hidden;
+  }
+  button, input, select { font: inherit; }
+  button {
+    border: 1px solid var(--line);
+    background: #152238;
+    color: var(--text);
+    border-radius: 8px;
+    padding: 7px 12px;
+    cursor: pointer;
+    transition: background .15s, border-color .15s, opacity .15s;
+    white-space: nowrap;
+  }
+  button:hover { background: #1a2a45; border-color: #2b4268; }
+  button:disabled { opacity: .45; cursor: not-allowed; }
+  button.primary { background: var(--accent2); border-color: var(--accent); }
+  button.primary:hover { background: #1d4ed8; }
+  button.ghost { background: transparent; }
+  button.danger { color: #fecaca; border-color: #5b2330; background: #2a1118; }
+  button.small { padding: 4px 9px; font-size: 12px; }
+  input, select {
+    background: #0a1322;
+    color: var(--text);
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    padding: 7px 9px;
+    outline: none;
+  }
+  input:focus, select:focus { border-color: var(--accent); }
+  input[readonly] { color: var(--muted); }
+  .app { display: flex; height: 100vh; }
+  .sidebar {
+    width: 232px;
+    flex: 0 0 232px;
+    background: linear-gradient(180deg, #0c1729 0%, #09111f 100%);
+    border-right: 1px solid var(--line);
+    display: flex;
+    flex-direction: column;
+    padding: 18px 14px;
+  }
+  .brand { display: flex; align-items: center; gap: 10px; padding: 2px 6px 18px; }
+  .logo {
+    width: 38px; height: 38px; border-radius: 10px;
+    background: linear-gradient(135deg, #3b82f6, #22d3ee);
+    color: #04101f; font-weight: 800; font-size: 16px;
+    display: flex; align-items: center; justify-content: center;
+  }
+  .brand-title { font-size: 16px; font-weight: 700; letter-spacing: .5px; }
+  .brand-sub { color: var(--muted); font-size: 11px; margin-top: 2px; }
+  nav { display: flex; flex-direction: column; gap: 4px; }
+  .nav-btn {
+    text-align: left;
+    background: transparent;
+    border: 1px solid transparent;
+    padding: 10px 12px;
+    border-radius: 9px;
+    color: #b7c6dd;
+  }
+  .nav-btn:hover { background: #122039; }
+  .nav-btn.active {
+    background: linear-gradient(90deg, rgba(59,130,246,.22), rgba(59,130,246,.05));
+    border-color: rgba(59,130,246,.35);
+    color: #fff;
+  }
+  .side-status {
+    margin-top: auto;
+    border-top: 1px solid var(--line);
+    padding: 14px 6px 8px;
+    display: flex; flex-direction: column; gap: 8px;
+    color: var(--muted); font-size: 12px;
+  }
+  .side-row { display: flex; align-items: center; gap: 7px; }
+  .dot { width: 8px; height: 8px; border-radius: 50%; background: #475569; flex: 0 0 8px; }
+  .dot.on { background: var(--green); box-shadow: 0 0 8px rgba(34,197,94,.6); }
+  .dot.err { background: var(--red); box-shadow: 0 0 8px rgba(239,68,68,.5); }
+  .side-foot { color: #566781; font-size: 11px; padding: 8px 6px 0; }
+  .main { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+  .topbar {
+    height: 74px; flex: 0 0 74px;
+    border-bottom: 1px solid var(--line);
+    padding: 14px 22px;
+    display: flex; align-items: center; justify-content: space-between;
+    background: rgba(7,13,24,.55);
+    backdrop-filter: blur(8px);
+  }
+  .topbar h1 { margin: 0; font-size: 19px; letter-spacing: .3px; }
+  .topbar p { margin: 4px 0 0; color: var(--muted); font-size: 12px; }
+  .top-actions { display: flex; align-items: center; gap: 10px; }
+  .pill {
+    padding: 5px 11px; border-radius: 999px; font-size: 12px;
+    border: 1px solid var(--line); color: var(--muted); background: #0d1728;
+  }
+  .pill.on { color: #86efac; border-color: rgba(34,197,94,.4); background: rgba(34,197,94,.1); }
+  .pill.err { color: #fca5a5; border-color: rgba(239,68,68,.4); background: rgba(239,68,68,.1); }
+  .views { flex: 1; min-height: 0; position: relative; }
+  .view {
+    display: none;
+    position: absolute; inset: 0;
+    overflow: auto;
+    padding: 18px 22px 28px;
+  }
+  .view.active { display: block; }
+  .card {
+    background: linear-gradient(180deg, var(--card), var(--card2));
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    padding: 14px 16px;
+    margin-bottom: 14px;
+  }
+  .card-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; margin-bottom: 10px; }
+  .card-head h2 { margin: 0; font-size: 14px; }
+  .card-head p { margin: 4px 0 0; }
+  .row { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+  .row + .row { margin-top: 9px; }
+  .muted { color: var(--muted); }
+  .hint { color: var(--muted); font-size: 12px; line-height: 1.55; }
+  .grid-2 { display: grid; grid-template-columns: 1.15fr .85fr; gap: 14px; align-items: start; }
+  .stat-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-bottom: 14px; }
+  .stat {
+    background: #0d1728; border: 1px solid var(--line); border-radius: 10px;
+    padding: 11px 12px; min-height: 62px;
+  }
+  .stat span { display: block; color: var(--muted); font-size: 11px; margin-bottom: 6px; }
+  .stat b { font-size: 13px; font-weight: 600; word-break: break-all; }
+  .stat b.ok { color: #86efac; }
+  .stat b.err { color: #fca5a5; }
+  .form-grid { display: grid; grid-template-columns: auto 1fr auto auto; gap: 8px 10px; align-items: center; }
+  .form-grid label { color: var(--muted); font-size: 12px; }
+  .form-grid .wide { grid-column: 2 / -1; }
+  .wifi-list { display: flex; flex-direction: column; gap: 6px; margin: 8px 0; max-height: 180px; overflow: auto; }
+  .wifi-item {
+    display: flex; align-items: center; gap: 8px;
+    padding: 7px 9px; border: 1px solid var(--line); border-radius: 8px;
+    background: #0b1525;
+  }
+  .wifi-item b { font-weight: 600; }
+  .badge {
+    font-size: 10px; padding: 2px 6px; border-radius: 999px;
+    background: rgba(59,130,246,.14); color: #93c5fd; border: 1px solid rgba(59,130,246,.25);
+  }
+  .badge.gray { background: #16233a; color: var(--muted); border-color: var(--line); }
+  .target-list { display: flex; flex-direction: column; gap: 8px; margin: 10px 0; }
+  .target-row {
+    display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
+    padding: 10px 12px; background: #0b1525; border: 1px solid var(--line); border-radius: 9px;
+  }
+  .target-row .idx { width: 22px; color: var(--muted); text-align: right; }
+  .target-row input[type="date"] { width: 150px; }
+  .target-row input[type="time"] { width: 130px; }
+  .empty { color: var(--muted); padding: 26px 10px; text-align: center; }
+  .platform-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
+  .platform {
+    border: 1px solid var(--line); border-radius: 10px; padding: 11px 12px; background: #0b1525;
+  }
+  .platform .name { font-weight: 700; margin-bottom: 5px; }
+  .platform .state { color: var(--muted); font-size: 12px; }
+  .log-card { display: flex; flex-direction: column; }
+  #logBox {
+    margin: 0; height: 260px; overflow: auto;
+    background: #060c16; border: 1px solid var(--line); border-radius: 9px;
+    padding: 10px; color: #a9bdd8; font-family: Consolas, "Cascadia Mono", monospace;
+    font-size: 11.5px; line-height: 1.55; white-space: pre-wrap;
+  }
+  .page-list { display: flex; flex-direction: column; gap: 10px; }
+  .page-card {
+    background: #0b1525; border: 1px solid var(--line); border-radius: 10px; padding: 10px 12px;
+  }
+  .page-head { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+  .page-index { color: var(--muted); width: 24px; font-variant-numeric: tabular-nums; }
+  .page-head select.p-type { min-width: 132px; }
+  .page-fields {
+    display: grid; grid-template-columns: auto 1fr auto 160px; gap: 8px 10px;
+    align-items: center; margin-top: 8px;
+  }
+  .page-fields label { color: var(--muted); font-size: 12px; }
+  .page-live { margin-top: 9px; border-top: 1px dashed var(--line); padding-top: 9px; }
+  .page-live[hidden] { display: none; }
+  .room-slot {
+    display: flex; align-items: center; gap: 8px; flex-wrap: wrap;
+    margin-top: 7px; padding: 7px 9px; border: 1px solid #17263f; border-radius: 8px;
+    background: #0a1322;
+  }
+  .room-slot .r-index { color: var(--muted); font-size: 12px; width: 42px; }
+  .room-slot .r-room { width: 190px; }
+  .room-slot .r-label { width: 86px; }
+  .display-grid {
+    display: grid; grid-template-columns: auto 110px auto 110px auto minmax(220px, 1fr);
+    gap: 8px 10px; align-items: center;
+  }
+  .display-grid label { color: var(--muted); font-size: 12px; }
+  .color-grid { display: flex; flex-wrap: wrap; gap: 14px; margin-top: 12px; }
+  .color-grid label { display: flex; align-items: center; gap: 7px; color: var(--muted); font-size: 12px; }
+  .color-grid input[type="color"] {
+    width: 42px; height: 30px; padding: 2px; background: #0a1322; border: 1px solid var(--line);
+    border-radius: 7px; cursor: pointer;
+  }
+  .help-card h2 { margin: 0 0 8px; font-size: 17px; }
+  .help-card h3 { margin: 18px 0 7px; font-size: 14px; color: #cfe0f7; }
+  .help-card p, .help-card li { color: #b7c6dd; line-height: 1.75; }
+  .help-card ol, .help-card ul { margin: 6px 0; padding-left: 22px; }
+  .help-card table { border-collapse: collapse; margin: 8px 0; width: 100%; }
+  .help-card th, .help-card td {
+    border: 1px solid var(--line); padding: 7px 9px; text-align: left; font-size: 12px;
+  }
+  .help-card th { color: var(--muted); background: #0a1322; font-weight: 600; }
+  .help-card code {
+    background: #0a1322; border: 1px solid var(--line); border-radius: 5px;
+    padding: 1px 5px; color: #93c5fd; font-family: Consolas, monospace;
+  }
+  .toast {
+    position: fixed; left: 50%; bottom: 26px; transform: translateX(-50%) translateY(18px);
+    background: #13233c; border: 1px solid #2b4268; color: var(--text);
+    padding: 10px 16px; border-radius: 10px; font-size: 13px;
+    opacity: 0; pointer-events: none; transition: opacity .2s, transform .2s;
+    max-width: 70vw; z-index: 50;
+  }
+  .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+  .toast.err { border-color: #7f1d1d; background: #2a1014; color: #fecaca; }
+  .toast.ok { border-color: #14532d; background: #0d2417; color: #bbf7d0; }
+  @media (max-width: 1120px) {
+    .sidebar { width: 200px; flex-basis: 200px; }
+    .grid-2 { grid-template-columns: 1fr; }
+    .stat-grid { grid-template-columns: repeat(2, 1fr); }
+  }
+</style>
+</head>
+<body>
+<div class="app">
+  <aside class="sidebar">
+    <div class="brand">
+      <div class="logo">TC</div>
+      <div>
+        <div class="brand-title">TC002</div>
+        <div class="brand-sub">桌面助手</div>
+      </div>
+    </div>
+    <nav>
+      <button class="nav-btn active" data-view="device">设备概览</button>
+      <button class="nav-btn" data-view="forward">直播转发</button>
+      <button class="nav-btn" data-view="targets">倒计时目标</button>
+      <button class="nav-btn" data-view="pages">页面与显示</button>
+      <button class="nav-btn" data-view="help">使用说明</button>
+    </nav>
+    <div class="side-status">
+      <div class="side-row"><span class="dot" id="sideDeviceDot"></span><span id="sideDeviceText">设备未连接</span></div>
+      <div class="side-row"><span class="dot" id="sideForwardDot"></span><span id="sideForwardText">转发未启动</span></div>
+    </div>
+    <div class="side-foot">v1.0 · bridge 3.0</div>
+  </aside>
+
+  <main class="main">
+    <header class="topbar">
+      <div>
+        <h1 id="viewTitle">设备概览</h1>
+        <p id="viewSub">连接 TC002，查看状态与常用操作</p>
+      </div>
+      <div class="top-actions">
+        <span class="pill" id="devicePill">未连接</span>
+        <button class="ghost" id="btnHelp">使用说明</button>
+      </div>
+    </header>
+
+    <div class="views">
+      <!-- ============================ 设备概览 ============================ -->
+      <section class="view active" id="view-device">
+        <div class="card">
+          <div class="row">
+            <label class="muted">设备 IP</label>
+            <input id="deviceHost" value="192.168.31.124" style="width:160px">
+            <label class="muted">端口</label>
+            <input id="devicePort" value="8080" style="width:76px">
+            <button id="btnScan">搜索设备</button>
+            <button class="primary" id="btnConnect">连接</button>
+            <span class="muted" id="connectStatus">未连接</span>
+          </div>
+          <div class="row">
+            <label class="muted">发现的设备</label>
+            <select id="scanResults" style="min-width:420px">
+              <option value="">点击“搜索设备”</option>
+            </select>
+            <span class="hint">SoftAP 配网默认 192.168.100.1</span>
+          </div>
+        </div>
+
+        <div class="stat-grid">
+          <div class="stat"><span>WiFi 网络</span><b id="statWifi">—</b></div>
+          <div class="stat"><span>设备时间</span><b id="statTime">—</b></div>
+          <div class="stat"><span>时区</span><b id="statTz">—</b></div>
+          <div class="stat"><span>运行时长</span><b id="statUptime">—</b></div>
+          <div class="stat"><span>当前页</span><b id="statPage">—</b></div>
+          <div class="stat"><span>直播健康</span><b id="statLive">—</b></div>
+        </div>
+
+        <div class="card">
+          <div class="card-head"><div><h2>快捷操作</h2></div></div>
+          <div class="row">
+            <button id="btnPrev">上一页</button>
+            <button id="btnNext">下一页</button>
+            <button id="btnSyncTime">同步网络时间</button>
+            <button id="btnRefreshLive">刷新直播数据</button>
+            <button id="btnPagesTab">页面与显示</button>
+          </div>
+        </div>
+
+        <div class="grid-2">
+          <div class="card">
+            <div class="card-head">
+              <div>
+                <h2>直播数据源</h2>
+                <p class="hint">hybrid：B 站直连，抖音/快手走本机转发；bridge：三平台都走转发。</p>
+              </div>
+            </div>
+            <div class="form-grid">
+              <label>数据源</label>
+              <select id="liveSource">
+                <option value="hybrid">hybrid（B 站直连 + 抖音/快手转发）</option>
+                <option value="bridge">bridge（全部走转发）</option>
+                <option value="off">off（关闭直播数据）</option>
+                <option value="push">push（外部程序推送）</option>
+              </select>
+              <label>刷新(s)</label>
+              <input id="liveRefresh" value="30" style="width:74px">
+              <label>超时(ms)</label>
+              <input id="liveTimeout" value="3000" style="width:88px">
+              <label>转发地址</label>
+              <input id="liveUrl" class="wide" placeholder="http://<本机IP>:8081/live">
+            </div>
+            <div class="row" style="margin-top:10px">
+              <button id="btnUseBridge">使用本机转发地址</button>
+              <button class="primary" id="btnSaveLive">写入设备并刷新</button>
+            </div>
+          </div>
+
+          <div class="card">
+            <div class="card-head"><div><h2>WiFi 配网</h2><p class="hint" id="wifiCurrent">当前网络：—</p></div></div>
+            <div class="wifi-list" id="wifiList"></div>
+            <div class="row">
+              <input id="wifiSsid" placeholder="SSID" style="width:150px">
+              <input id="wifiPassword" type="password" placeholder="密码（留空=保留）" style="width:150px">
+              <button id="btnAddWifi">添加/更新</button>
+            </div>
+            <p class="hint" style="margin-top:8px">设备不能主动扫描，仅支持 2.4GHz；保存后会重连，IP 可能变化。</p>
+          </div>
+        </div>
+      </section>
+
+      <!-- ============================ 直播转发 ============================ -->
+      <section class="view" id="view-forward">
+        <div class="card">
+          <div class="row">
+            <label class="muted">监听端口</label>
+            <input id="forwardPort" value="8081" style="width:90px">
+            <button class="primary" id="btnForwardToggle">启动转发</button>
+            <span class="muted" id="forwardStatus">未启动</span>
+          </div>
+          <div class="row">
+            <label class="muted">转发地址</label>
+            <input id="forwardUrl" readonly placeholder="启动后显示" style="flex:1;min-width:280px">
+            <button id="btnCopyUrl">复制</button>
+            <button id="btnCopyConfig">复制配置示例</button>
+          </div>
+          <p class="hint" id="forwardAddresses"></p>
+        </div>
+
+        <div class="card">
+          <div class="card-head"><div><h2>平台状态</h2></div></div>
+          <div class="platform-grid">
+            <div class="platform"><div class="name">B 站</div><div class="state" id="platBili">—</div></div>
+            <div class="platform"><div class="name">抖音</div><div class="state" id="platDouyin">—</div></div>
+            <div class="platform"><div class="name">快手</div><div class="state" id="platKuaishou">—</div></div>
+          </div>
+          <p class="hint" style="margin-top:9px">快手需要 Playwright；打包版优先调用系统 Edge，不需要下载 Chromium。</p>
+        </div>
+
+        <div class="card log-card">
+          <div class="card-head">
+            <div><h2>运行日志</h2></div>
+            <button class="ghost small" id="btnClearLog">清空显示</button>
+          </div>
+          <pre id="logBox"></pre>
+        </div>
+      </section>
+
+      <!-- ============================ 倒计时目标 ============================ -->
+      <section class="view" id="view-targets">
+        <div class="card">
+          <div class="card-head">
+            <div>
+              <h2>倒计时目标</h2>
+              <p class="hint" id="targetDeviceInfo">连接设备后可读取；目标按设备本地时间生效。</p>
+            </div>
+            <div class="row">
+              <button id="btnTargetReload">从设备重读</button>
+              <button class="primary" id="btnTargetSave">保存到设备</button>
+            </div>
+          </div>
+          <div class="empty" id="targetEmpty">还没有目标。点击下方“添加目标”。</div>
+          <div class="target-list" id="targetList"></div>
+          <button id="btnAddTarget" class="ghost">+ 添加目标</button>
+          <p class="hint" style="margin-top:10px">
+            最多 12 个；目标到达后对应的倒计时页会显示正计时。修改后必须点“保存到设备”。
+          </p>
+        </div>
+      </section>
+
+      <!-- ============================ 页面与显示 ============================ -->
+      <section class="view" id="view-pages">
+        <div class="card">
+          <div class="card-head">
+            <div>
+              <h2>页面列表</h2>
+              <p class="hint">顺序 = 旋钮顺序；直播页每页 2 个房间。保存后设备热生效。</p>
+            </div>
+            <div class="row">
+              <button id="btnPageReload">从设备重读</button>
+              <button id="btnPageAdd">+ 添加页面</button>
+              <button class="primary" id="btnPagesSave">保存页面</button>
+            </div>
+          </div>
+          <div class="empty" id="pageEmpty">连接设备后读取页面配置</div>
+          <div class="page-list" id="pageList"></div>
+          <p class="hint" style="margin-top:10px">
+            最多 12 页；短标题只允许 ASCII（≤8）；保存只修改 pages/defaultPageId，不动直播/WiFi/目标。
+          </p>
+        </div>
+
+        <div class="card">
+          <div class="card-head">
+            <div>
+              <h2>显示、时区与 NTP</h2>
+              <p class="hint">时区单位分钟（480 = UTC+8）；NTP 留空使用系统默认服务器。</p>
+            </div>
+            <div class="row">
+              <button id="btnDisplayReload">从设备重读</button>
+              <button class="primary" id="btnDisplaySave">保存显示设置</button>
+            </div>
+          </div>
+          <div class="display-grid">
+            <label>时区(分钟)</label><input id="dispTz" type="number" min="-720" max="840" step="15">
+            <label>预警秒数</label><input id="dispWarn" type="number" min="0" max="600">
+            <label>NTP 服务器</label><input id="dispNtp" placeholder="ntp.ntsc.ac.cn 或留空">
+          </div>
+          <div class="row" style="margin-top:8px">
+            <span class="hint" id="dispTzHint">UTC+08:00</span>
+          </div>
+          <div class="color-grid">
+            <label>时钟 <input id="colorClock" type="color" value="#ffffff"></label>
+            <label>倒计时 <input id="colorCountdown" type="color" value="#00ff00"></label>
+            <label>正计时 <input id="colorCountup" type="color" value="#00bfff"></label>
+            <label>预警 <input id="colorWarning" type="color" value="#ff2020"></label>
+            <label>暗色 <input id="colorDim" type="color" value="#808080"></label>
+          </div>
+          <div class="row" style="margin-top:12px">
+            <button class="primary" id="btnSyncNetwork2">立即同步网络时间</button>
+            <span class="hint">从 NTP/HTTP 获取网络时间并写入设备，不使用电脑本地时钟。</span>
+          </div>
+        </div>
+      </section>
+
+      <!-- ============================ 使用说明 ============================ -->
+      <section class="view" id="view-help">
+        <div class="card help-card">
+          <h2>使用说明</h2>
+          <p>不需要打开或登录 Edge / B 站 / 抖音 / 快手，所有抓取都在后台完成。</p>
+
+          <h3>第一次使用</h3>
+          <ol>
+            <li>双击运行 <code>TC002Desk.exe</code>，确认左下角显示“转发运行中”。</li>
+            <li>电脑和 TC002 连同一个局域网；首次运行防火墙提示请允许“专用网络”。</li>
+            <li>“设备概览”里点“连接”（默认 <code>192.168.31.124:8080</code>，也可搜索设备）。</li>
+            <li>“页面与显示”编辑页面；直播页填房间号；保存后设备热生效。</li>
+            <li>设备切到直播页，或按旋钮按键立即刷新；平时按 <code>live.refreshSec</code> 自动刷新。</li>
+          </ol>
+
+          <h3>平台房间号</h3>
+          <table>
+            <tr><th>平台</th><th>填写内容</th><th>示例</th></tr>
+            <tr><td>B 站</td><td>直播间短号或真实房间号</td><td><code>6</code> / <code>544618</code></td></tr>
+            <tr><td>抖音</td><td>分享链接里的 12 位 web_rid，或 19 位 room_id</td><td><code>611063790284</code></td></tr>
+            <tr><td>快手</td><td>live.kuaishou.com/u/ 后面的 principalId</td><td><code>3xwnf96yetb5ewm</code></td></tr>
+          </table>
+
+          <h3>数据源</h3>
+          <ul>
+            <li><code>hybrid</code>：B 站由设备直连，抖音/快手由本机转发（推荐）。</li>
+            <li><code>bridge</code>：三个平台都由本机转发。</li>
+            <li><code>off</code>：不取直播数据；<code>push</code>：由外部程序 POST /api/live 推送。</li>
+          </ul>
+
+          <h3>快手说明</h3>
+          <ul>
+            <li>工具会自己启动隐藏的无头 Edge，不读取你浏览器里的登录状态。</li>
+            <li>第一次请求约 3–10 秒，可能先显示 <code>--</code> 或 <code>timeout</code>，下一次轮询就有数据。</li>
+            <li>平台按 IP 限流时会返回 <code>rate_limited</code>，请等几分钟或减少快手房间数；登录不能绕过。</li>
+          </ul>
+
+          <h3>常见问题</h3>
+          <ul>
+            <li><b>设备显示 --</b>：检查转发是否运行、设备 <code>live.url</code> 是否为本机局域网地址、防火墙是否放行 8081。</li>
+            <li><b>连接失败</b>：确认设备 IP（路由器 DHCP 可能变化），或用“搜索设备”；SoftAP 配网默认 <code>192.168.100.1</code>。</li>
+            <li><b>切换后 IP 变了</b>：WiFi 保存后设备会重连，重新搜索/连接即可。</li>
+            <li><b>关闭软件</b>：转发会停止；需要常驻请保持窗口运行，或把 exe 放进启动项。</li>
+            <li><b>快手 rate_limited</b>：平台限流，不是设备故障；降低刷新频率或房间数。</li>
+          </ul>
+
+          <h3>安全</h3>
+          <p>只监听局域网，不要把 8081 映射到公网；不需要账号，不落盘任何 cookie。</p>
+        </div>
+      </section>
+    </div>
+  </main>
+</div>
+<div class="toast" id="toast"></div>
+
+<script>
+(function () {
+  "use strict";
+
+  const S = {
+    started: false,
+    hasDevice: false,
+    online: false,
+    host: "",
+    port: 8080,
+    snapshot: null,
+    forward: null,
+    logSeq: 0,
+    liveDirty: false,
+    targetsDirty: false,
+    pagesDirty: false,
+    displayDirty: false,
+    pagesSig: "",
+    displaySig: "",
+    wifiSig: "",
+    busy: { device: false, forward: false, scan: false },
+    view: "device",
+  };
+
+  const VIEW_META = {
+    device: ["设备概览", "连接 TC002，查看状态与常用操作"],
+    forward: ["直播转发", "在电脑上转发 B 站 / 抖音 / 快手 数据到设备"],
+    targets: ["倒计时目标", "直接编辑设备保存的倒计时日期与时间"],
+    pages: ["页面与显示", "页面列表、颜色、时区与 NTP，全部在本地编辑"],
+    help: ["使用说明", "平台房间号、运行方式与常见问题"],
+  };
+
+  function $(id) { return document.getElementById(id); }
+  function api() { return (window.pywebview && window.pywebview.api) || null; }
+  function loadSetting(key, fallback) {
+    try { return localStorage.getItem(key) || fallback; } catch (error) { return fallback; }
+  }
+  function saveSetting(key, value) {
+    try { localStorage.setItem(key, value); } catch (error) { /* WebView 可能禁用本地存储 */ }
+  }
+
+  async function call(name, ...args) {
+    const a = api();
+    if (!a) throw new Error("pywebview API 未就绪");
+    return await a[name](...args);
+  }
+
+  let toastTimer = null;
+  function toast(message, kind) {
+    const el = $("toast");
+    el.textContent = message || "";
+    el.className = "toast show" + (kind ? " " + kind : "");
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(() => { el.className = "toast"; }, 4200);
+  }
+
+  function errText(error) {
+    if (!error) return "未知错误";
+    return error.message || String(error);
+  }
+
+  async function withBusy(button, key, fn) {
+    if (S.busy[key]) return;
+    S.busy[key] = true;
+    if (button) button.disabled = true;
+    try {
+      return await fn();
+    } catch (error) {
+      toast(errText(error), "err");
+      return null;
+    } finally {
+      S.busy[key] = false;
+      if (button) button.disabled = false;
+    }
+  }
+
+  function setPill(text, cls) {
+    const pill = $("devicePill");
+    pill.textContent = text;
+    pill.className = "pill" + (cls ? " " + cls : "");
+  }
+
+  function setDot(id, cls) {
+    const dot = $(id);
+    dot.className = "dot" + (cls ? " " + cls : "");
+  }
+
+  function formatTz(value) {
+    const n = Number(value);
+    if (!Number.isFinite(n)) return "—";
+    const sign = n >= 0 ? "+" : "-";
+    const abs = Math.abs(n);
+    return "UTC" + sign + String(Math.floor(abs / 60)).padStart(2, "0") + ":" + String(abs % 60).padStart(2, "0");
+  }
+
+  function formatUptime(value) {
+    const n = Number(value);
+    if (!Number.isFinite(n) || n < 0) return "—";
+    const days = Math.floor(n / 86400);
+    const hours = Math.floor((n % 86400) / 3600);
+    const minutes = Math.floor((n % 3600) / 60);
+    if (days) return days + " 天 " + hours + " 小时";
+    if (hours) return hours + " 小时 " + minutes + " 分";
+    return Math.max(1, minutes) + " 分钟";
+  }
+
+  function sourceLabel(source) {
+    return {
+      hybrid: "hybrid（B站直连 + 抖音/快手转发）",
+      bridge: "bridge（全部走转发）",
+      off: "off（关闭）",
+      push: "push（外部推送）",
+    }[source] || source || "—";
+  }
+
+  function showView(name) {
+    if (!VIEW_META[name]) return;
+    S.view = name;
+    document.querySelectorAll(".nav-btn").forEach((btn) => {
+      btn.classList.toggle("active", btn.dataset.view === name);
+    });
+    document.querySelectorAll(".view").forEach((section) => {
+      section.classList.toggle("active", section.id === "view-" + name);
+    });
+    $("viewTitle").textContent = VIEW_META[name][0];
+    $("viewSub").textContent = VIEW_META[name][1];
+    if (name === "pages") renderPages(false);
+    if (name === "targets") renderTargets(false);
+  }
+
+  // ------------------------------------------------------------- app boot
+  function maybeStart() {
+    if (S.started) return;
+    if (!api()) return;
+    S.started = true;
+    initApp().catch((error) => toast(errText(error), "err"));
+  }
+
+  document.addEventListener("DOMContentLoaded", () => {
+    bindEvents();
+    S.host = loadSetting("tc002.host", "192.168.31.124");
+    S.port = Number(loadSetting("tc002.port", 8080));
+    $("deviceHost").value = S.host;
+    $("devicePort").value = String(S.port || 8080);
+    maybeStart();
+    setTimeout(maybeStart, 500);
+    setTimeout(maybeStart, 1500);
+  });
+  window.addEventListener("pywebviewready", maybeStart);
+
+  async function initApp() {
+    try {
+      const info = await call("app_info");
+      if (info && info.version) {
+        document.querySelector(".side-foot").textContent = "v" + info.version + " · bridge " + info.bridgeVersion;
+      }
+    } catch (error) { /* 非关键 */ }
+    await refreshForward();
+    if (!S.forward || !S.forward.running) {
+      try {
+        const started = await call("start_forwarder", Number($("forwardPort").value || 8081));
+        if (started.ok) {
+          S.forward = started;
+          renderForward(started);
+        } else {
+          toast("转发启动失败：" + (started.error || "端口可能被占用"), "err");
+        }
+      } catch (error) {
+        toast("转发启动失败：" + errText(error), "err");
+      }
+    }
+    const host = $("deviceHost").value.trim();
+    if (host) {
+      await connectDevice(false);
+    }
+    setInterval(refreshForward, 1500);
+    setInterval(refreshLogs, 800);
+    setInterval(() => {
+      if (S.hasDevice && !S.busy.device) refreshDevice();
+    }, 5000);
+  }
+
+  // ------------------------------------------------------------- forwarder
+  async function refreshForward() {
+    try {
+      const state = await call("forwarder_state");
+      S.forward = state;
+      renderForward(state);
+    } catch (error) { /* 静默 */ }
+  }
+
+  function renderForward(state) {
+    if (!state) return;
+    const running = !!state.running;
+    $("btnForwardToggle").textContent = running ? "停止转发" : "启动转发";
+    $("forwardStatus").textContent = running ? ("运行中 · 端口 " + state.port) : "未启动";
+    if (state.port) $("forwardPort").value = String(state.port);
+    $("forwardUrl").value = state.url || "";
+    $("forwardAddresses").textContent = (state.addresses && state.addresses.length)
+      ? "本机可用地址：" + state.addresses.join("    ")
+      : "";
+    setDot("sideForwardDot", running ? "on" : "");
+    $("sideForwardText").textContent = running ? ("转发运行中 · " + state.port) : "转发未启动";
+    const platforms = state.platforms || {};
+    $("platBili").textContent = platforms.bilibili || (running ? "—" : "未启动");
+    $("platDouyin").textContent = platforms.douyin || (running ? "—" : "未启动");
+    const ks = platforms.kuaishou;
+    $("platKuaishou").textContent = ks === "ready"
+      ? "ready"
+      : (ks === "requires_playwright" ? "需要 Playwright" : (ks || (running ? "—" : "未启动")));
+  }
+
+  async function refreshLogs() {
+    try {
+      const result = await call("logs_since", S.logSeq);
+      if (!result || !result.ok) return;
+      S.logSeq = result.seq;
+      if (!result.lines || !result.lines.length) return;
+      const box = $("logBox");
+      const atBottom = box.scrollTop + box.clientHeight >= box.scrollHeight - 24;
+      box.textContent += result.lines.join("\n") + "\n";
+      const lines = box.textContent.split("\n");
+      if (lines.length > 1200) box.textContent = lines.slice(lines.length - 1200).join("\n");
+      if (atBottom) box.scrollTop = box.scrollHeight;
+    } catch (error) { /* 静默 */ }
+  }
+
+  // --------------------------------------------------------------- device
+  async function scanDevices() {
+    await withBusy($("btnScan"), "scan", async () => {
+      $("connectStatus").textContent = "正在搜索…";
+      const result = await call("scan_devices");
+      if (!result.ok) {
+        $("connectStatus").textContent = "搜索失败";
+        toast(result.error || "搜索失败", "err");
+        return;
+      }
+      const devices = result.devices || [];
+      const select = $("scanResults");
+      select.innerHTML = "";
+      if (!devices.length) {
+        const option = document.createElement("option");
+        option.value = "";
+        option.textContent = "未发现设备（可手动输入 IP）";
+        select.appendChild(option);
+        $("connectStatus").textContent = "未发现设备";
+        toast("未发现 TC002，请确认设备和电脑在同一局域网", "err");
+        return;
+      }
+      devices.forEach((device) => {
+        const option = document.createElement("option");
+        option.value = device.ip || device.host || "";
+        option.textContent = (device.ip || device.host) + "  |  " + (device.ssid || "—") + "  |  " + (device.pageTitle || "—");
+        select.appendChild(option);
+      });
+      select.selectedIndex = 0;
+      $("deviceHost").value = select.value;
+      $("connectStatus").textContent = "发现 " + devices.length + " 台设备";
+      toast("发现 " + devices.length + " 台 TC002", "ok");
+    });
+  }
+
+  async function connectDevice(showError) {
+    const host = $("deviceHost").value.trim();
+    const port = Number($("devicePort").value || 8080);
+    if (!host) { toast("请输入设备 IP", "err"); return; }
+    await withBusy($("btnConnect"), "device", async () => {
+      $("connectStatus").textContent = "正在连接…";
+      const result = await call("connect_device", host, port);
+      if (!result.ok) {
+        S.hasDevice = false;
+        S.online = false;
+        S.host = "";
+        $("connectStatus").textContent = "连接失败";
+        setPill("未连接", "");
+        setDot("sideDeviceDot", "err");
+        $("sideDeviceText").textContent = "设备未连接";
+        if (showError !== false) toast(result.error || "连接失败", "err");
+        return;
+      }
+      S.hasDevice = true;
+      S.online = true;
+      S.host = result.host;
+      S.port = result.port;
+      saveSetting("tc002.host", S.host);
+      saveSetting("tc002.port", String(S.port));
+      $("connectStatus").textContent = "已连接 " + S.host;
+      S.snapshot = result.snapshot;
+      S.liveDirty = false;
+      S.targetsDirty = false;
+      S.pagesDirty = false;
+      S.displayDirty = false;
+      S.wifiSig = "";
+      applySnapshot(result.snapshot, true);
+      toast("已连接 " + S.host, "ok");
+    });
+  }
+
+  async function refreshDevice() {
+    if (!S.hasDevice) return;
+    S.busy.device = true;
+    try {
+      const result = await call("device_state");
+      if (!result.ok) {
+        S.online = false;
+        renderOnlineState(result.error);
+        return;
+      }
+      S.online = !!result.connected;
+      if (result.host) {
+        S.host = result.host;
+        S.port = result.port;
+      }
+      applySnapshot(result.snapshot, false);
+    } catch (error) {
+      S.online = false;
+      renderOnlineState(errText(error));
+    } finally {
+      S.busy.device = false;
+    }
+  }
+
+  function renderOnlineState(error) {
+    setPill(S.hasDevice ? "离线" : "未连接", S.hasDevice ? "err" : "");
+    setDot("sideDeviceDot", S.hasDevice ? "err" : "");
+    $("sideDeviceText").textContent = S.hasDevice ? ("设备离线 · " + S.host) : "设备未连接";
+    $("connectStatus").textContent = S.hasDevice ? ("离线" + (error ? "：" + error : "")) : "未连接";
+  }
+
+  function applySnapshot(snapshot, populateForms) {
+    if (!snapshot) return;
+    S.snapshot = snapshot;
+    const status = snapshot.status || {};
+    const device = status.device || {};
+    const page = device.page || (status.state && status.state.page) || {};
+    const config = snapshot.config || {};
+    const live = snapshot.live || {};
+    const source = (config.live && config.live.source) || (live.source && live.source.kind) || "";
+
+    setPill("在线", "on");
+    setDot("sideDeviceDot", "on");
+    $("sideDeviceText").textContent = "设备在线 · " + S.host;
+    $("connectStatus").textContent = "已连接 " + S.host + (device.apMode ? "（SoftAP）" : "");
+
+    $("statWifi").textContent = (device.ssid || "—") + (device.wifi === false ? "（未连接）" : "");
+    $("statTime").textContent = device.localTime || "—";
+    $("statTz").textContent = formatTz(device.tzOffsetMinutes);
+    $("statUptime").textContent = formatUptime(device.uptimeSec);
+    $("statPage").textContent = page.title
+      ? (page.title + (typeof page.index === "number" && typeof page.count === "number"
+          ? "（" + (page.index + 1) + "/" + page.count + "）" : ""))
+      : "—";
+
+    const liveSource = live.source || {};
+    let healthText = "—";
+    let healthClass = "";
+    if (source === "off" || source === "") {
+      healthText = "未启用";
+    } else if (liveSource && typeof liveSource.reachable === "boolean") {
+      healthText = liveSource.reachable ? "正常" : "异常";
+      healthClass = liveSource.reachable ? "ok" : "err";
+      if (liveSource.error) healthText += "：" + liveSource.error;
+    }
+    $("statLive").textContent = healthText;
+    $("statLive").className = healthClass;
+
+    const wifi = snapshot.wifi;
+    if (wifi && wifi.current) {
+      $("wifiCurrent").textContent = "当前网络：" + (wifi.current.ssid || "—") + " · " + (wifi.current.ip || "—") + " · " + (wifi.current.wifi ? "已连接" : "未连接");
+    }
+
+    if (populateForms) {
+      populateLiveForm(config);
+      renderWifi(wifi);
+      renderTargets(true);
+      renderPages(true);
+      renderDisplay(true);
+    } else {
+      if (!S.liveDirty) populateLiveForm(config);
+      renderWifi(wifi);
+      renderTargets(false);
+      renderPages(false);
+      renderDisplay(false);
+    }
+  }
+
+  // ----------------------------------------------------------- live config
+  function populateLiveForm(config) {
+    const live = (config && config.live) || {};
+    $("liveSource").value = live.source || "hybrid";
+    $("liveUrl").value = live.url || "";
+    $("liveRefresh").value = String(live.refreshSec || 30);
+    $("liveTimeout").value = String(live.timeoutMs || 3000);
+    S.liveDirty = false;
+  }
+
+  async function useBridgeUrl() {
+    try {
+      const result = await call("best_bridge_url");
+      if (!result.ok) { toast(result.error || "转发服务未启动", "err"); return; }
+      $("liveUrl").value = result.url;
+      S.liveDirty = true;
+      toast("已填入 " + result.url, "ok");
+    } catch (error) { toast(errText(error), "err"); }
+  }
+
+  async function saveLiveConfig() {
+    const source = $("liveSource").value;
+    const url = $("liveUrl").value.trim();
+    const refresh = Number($("liveRefresh").value || 30);
+    const timeout = Number($("liveTimeout").value || 3000);
+    if ((source === "bridge" || source === "hybrid") && !url) {
+      toast("bridge/hybrid 必须填写转发地址", "err");
+      return;
+    }
+    await withBusy($("btnSaveLive"), "forward", async () => {
+      const result = await call("push_live_config", source, url, refresh, timeout);
+      if (!result.ok) { toast(result.error || "写入失败", "err"); return; }
+      S.liveDirty = false;
+      toast(result.warning || "直播配置已保存，设备已排队刷新", result.warning ? "err" : "ok");
+      setTimeout(refreshDevice, 900);
+    });
+  }
+
+  // ----------------------------------------------------------------- WiFi
+  function renderWifi(wifi) {
+    if (!wifi) return;
+    const networks = wifi.networks || [];
+    const signature = JSON.stringify(networks);
+    if (signature === S.wifiSig) return;
+    S.wifiSig = signature;
+    const currentSsid = (wifi.current && wifi.current.ssid) || "";
+    const list = $("wifiList");
+    list.innerHTML = "";
+    if (!networks.length) {
+      const empty = document.createElement("div");
+      empty.className = "hint";
+      empty.textContent = "设备还没有保存 WiFi";
+      list.appendChild(empty);
+      return;
+    }
+    networks.forEach((item) => {
+      const row = document.createElement("div");
+      row.className = "wifi-item";
+      const checkbox = document.createElement("input");
+      checkbox.type = "checkbox";
+      checkbox.checked = item.enabled !== false;
+      checkbox.addEventListener("change", async () => {
+        const result = await call("toggle_wifi", item.ssid, checkbox.checked);
+        if (!result.ok) {
+          checkbox.checked = !checkbox.checked;
+          toast(result.error || "保存失败", "err");
+          return;
+        }
+        toast((checkbox.checked ? "已启用 " : "已停用 ") + item.ssid + "，设备将重连", "ok");
+        S.wifiSig = "";
+        setTimeout(refreshDevice, 1200);
+      });
+      const name = document.createElement("b");
+      name.textContent = item.ssid;
+      row.appendChild(checkbox);
+      row.appendChild(name);
+      if (item.ssid === currentSsid) {
+        const badge = document.createElement("span");
+        badge.className = "badge";
+        badge.textContent = "当前";
+        row.appendChild(badge);
+      }
+      const pwd = document.createElement("span");
+      pwd.className = "badge gray";
+      pwd.textContent = item.hasPassword ? "已保存密码" : "开放";
+      row.appendChild(pwd);
+      list.appendChild(row);
+    });
+  }
+
+  async function addWifi() {
+    const ssid = $("wifiSsid").value.trim();
+    const password = $("wifiPassword").value;
+    if (!ssid) { toast("请输入 WiFi 名称", "err"); return; }
+    try {
+      const result = await call("add_wifi", ssid, password);
+      if (!result.ok) { toast(result.error || "保存失败", "err"); return; }
+      $("wifiPassword").value = "";
+      S.wifiSig = "";
+      toast("已保存 WiFi：" + ssid + "，设备将重连", "ok");
+      setTimeout(refreshDevice, 2500);
+    } catch (error) { toast(errText(error), "err"); }
+  }
+
+  // --------------------------------------------------------------- targets
+  function renderTargets(force) {
+    if (S.targetsDirty && !force) return;
+    const config = (S.snapshot && S.snapshot.config) || {};
+    const status = (S.snapshot && S.snapshot.status) || {};
+    const device = status.device || {};
+    const targets = Array.isArray(config.targets) ? config.targets : [];
+    if (S.snapshot) {
+      $("targetDeviceInfo").textContent =
+        "设备时区 " + formatTz(config.tzOffsetMinutes !== undefined ? config.tzOffsetMinutes : device.tzOffsetMinutes) +
+        " · 设备时间 " + (device.localTime || "—") +
+        " · 共 " + targets.length + " 个目标";
+    }
+    const list = $("targetList");
+    list.innerHTML = "";
+    targets.forEach((target) => addTargetRow(target));
+    $("targetEmpty").hidden = targets.length > 0;
+    S.targetsDirty = false;
+  }
+
+  function deviceToday() {
+    const device = (S.snapshot && S.snapshot.status && S.snapshot.status.device) || {};
+    if (device.localTime && device.localTime.length >= 10) return device.localTime.slice(0, 10);
+    const now = new Date();
+    return now.getFullYear() + "-" + String(now.getMonth() + 1).padStart(2, "0") + "-" + String(now.getDate()).padStart(2, "0");
+  }
+
+  function addTargetRow(target) {
+    const list = $("targetList");
+    const row = document.createElement("div");
+    row.className = "target-row";
+
+    const idx = document.createElement("span");
+    idx.className = "idx";
+    idx.textContent = String(list.children.length + 1);
+
+    const date = document.createElement("input");
+    date.type = "date";
+    date.className = "t-date";
+    date.value = target && target.date ? target.date : deviceToday();
+
+    const time = document.createElement("input");
+    time.type = "time";
+    time.step = "1";
+    time.className = "t-time";
+    let timeValue = (target && target.time) || "00:00:00";
+    if (timeValue.length === 5) timeValue += ":00";
+    time.value = timeValue;
+
+    const enabledLabel = document.createElement("label");
+    enabledLabel.className = "row";
+    const enabled = document.createElement("input");
+    enabled.type = "checkbox";
+    enabled.className = "t-enabled";
+    enabled.checked = !target || target.enabled !== false;
+    enabledLabel.appendChild(enabled);
+    enabledLabel.appendChild(document.createTextNode(" 启用"));
+
+    const remove = document.createElement("button");
+    remove.className = "danger small";
+    remove.textContent = "删除";
+    remove.addEventListener("click", () => {
+      row.remove();
+      S.targetsDirty = true;
+      renumberTargets();
+      updateTargetEmpty();
+    });
+
+    [date, time, enabled].forEach((el) => {
+      el.addEventListener("input", () => { S.targetsDirty = true; });
+      el.addEventListener("change", () => { S.targetsDirty = true; });
+    });
+
+    row.appendChild(idx);
+    row.appendChild(date);
+    row.appendChild(time);
+    row.appendChild(enabledLabel);
+    row.appendChild(remove);
+    list.appendChild(row);
+    S.targetsDirty = true;
+    updateTargetEmpty();
+    renumberTargets();
+  }
+
+  function renumberTargets() {
+    Array.from($("targetList").children).forEach((row, index) => {
+      const idx = row.querySelector(".idx");
+      if (idx) idx.textContent = String(index + 1);
+    });
+  }
+
+  function updateTargetEmpty() {
+    $("targetEmpty").hidden = $("targetList").children.length > 0;
+  }
+
+  function collectTargets() {
+    const rows = Array.from($("targetList").children);
+    const targets = [];
+    for (let i = 0; i < rows.length; i += 1) {
+      const row = rows[i];
+      const date = row.querySelector(".t-date").value;
+      let time = row.querySelector(".t-time").value;
+      const enabled = row.querySelector(".t-enabled").checked;
+      if (!date || !time) {
+        return { ok: false, error: "第 " + (i + 1) + " 个目标缺少日期或时间" };
+      }
+      if (time.length === 5) time += ":00";
+      targets.push({ date: date, time: time, enabled: enabled });
+    }
+    return { ok: true, targets: targets };
+  }
+
+  async function saveTargets() {
+    const collected = collectTargets();
+    if (!collected.ok) { toast(collected.error, "err"); return; }
+    await withBusy($("btnTargetSave"), "forward", async () => {
+      const result = await call("save_targets", collected.targets);
+      if (!result.ok) { toast(result.error || "保存失败", "err"); return; }
+      S.targetsDirty = false;
+      toast("已保存 " + result.count + " 个倒计时目标", "ok");
+      await refreshDevice();
+      renderTargets(true);
+    });
+  }
+
+  // --------------------------------------------------------- pages/display
+  const PAGE_TYPE_OPTIONS = [
+    ["clock", "时钟"],
+    ["clock_countdown", "时钟+倒计时"],
+    ["countdown", "倒计时"],
+    ["live", "直播"],
+    ["datetime", "日期+时间"],
+  ];
+  const PLATFORM_OPTIONS = [["bilibili", "B 站"], ["douyin", "抖音"], ["kuaishou", "快手"]];
+  const PAGE_METRIC_OPTIONS = [
+    ["online", "在线"], ["likes", "点赞"], ["fans", "粉丝"],
+    ["status", "开播状态"], ["title", "标题"], ["none", "不显示"],
+  ];
+  const ROOM_METRIC_OPTIONS = [
+    ["", "跟随页面"], ["online", "在线"], ["likes", "点赞"], ["fans", "粉丝"],
+    ["status", "开播状态"], ["title", "标题"], ["none", "不显示"],
+  ];
+
+  function makeSelect(options, value, className) {
+    const select = document.createElement("select");
+    if (className) select.className = className;
+    options.forEach(([optionValue, label]) => {
+      const option = document.createElement("option");
+      option.value = optionValue;
+      option.textContent = label;
+      select.appendChild(option);
+    });
+    if (value !== undefined && options.some(([optionValue]) => optionValue === value)) {
+      select.value = value;
+    }
+    return select;
+  }
+
+  function newPageId() {
+    const used = new Set(Array.from($("pageList").children).map((card) => card.dataset.id));
+    for (let i = 0; i < 100; i += 1) {
+      const id = "p" + i;
+      if (!used.has(id)) return id;
+    }
+    return "p" + Date.now().toString(36).slice(-6);
+  }
+
+  function markPagesDirty() { S.pagesDirty = true; }
+
+  function renderPages(force) {
+    if (S.pagesDirty && !force) return;
+    const config = (S.snapshot && S.snapshot.config) || {};
+    const pages = Array.isArray(config.pages) ? config.pages : [];
+    const signature = JSON.stringify({ pages: pages, defaultPageId: config.defaultPageId || "" });
+    if (!force && S.pagesSig === signature) return;
+    S.pagesSig = signature;
+    const list = $("pageList");
+    list.innerHTML = "";
+    pages.forEach((page) => addPageCard(page, page.id === config.defaultPageId));
+    S.pagesDirty = false;
+    renumberPages();
+    updatePageEmpty();
+  }
+
+  function addPageCard(page, isDefault) {
+    const list = $("pageList");
+    const card = document.createElement("div");
+    card.className = "page-card";
+    card.dataset.id = page && page.id ? page.id : newPageId();
+
+    const head = document.createElement("div");
+    head.className = "page-head";
+    const index = document.createElement("span");
+    index.className = "page-index";
+    index.textContent = String(list.children.length + 1);
+    const typeSelect = makeSelect(PAGE_TYPE_OPTIONS, (page && page.type) || "clock", "p-type");
+
+    const defaultLabel = document.createElement("label");
+    defaultLabel.className = "row";
+    const defaultRadio = document.createElement("input");
+    defaultRadio.type = "radio";
+    defaultRadio.name = "defaultPage";
+    defaultRadio.className = "p-default";
+    defaultRadio.checked = !!isDefault;
+    defaultLabel.appendChild(defaultRadio);
+    defaultLabel.appendChild(document.createTextNode(" 默认"));
+
+    const enabledLabel = document.createElement("label");
+    enabledLabel.className = "row";
+    const enabledBox = document.createElement("input");
+    enabledBox.type = "checkbox";
+    enabledBox.className = "p-enabled";
+    enabledBox.checked = !page || page.enabled !== false;
+    enabledLabel.appendChild(enabledBox);
+    enabledLabel.appendChild(document.createTextNode(" 启用"));
+
+    const up = document.createElement("button");
+    up.className = "ghost small";
+    up.textContent = "↑";
+    up.title = "上移";
+    const down = document.createElement("button");
+    down.className = "ghost small";
+    down.textContent = "↓";
+    down.title = "下移";
+    const remove = document.createElement("button");
+    remove.className = "danger small";
+    remove.textContent = "删除";
+
+    head.appendChild(index);
+    head.appendChild(typeSelect);
+    head.appendChild(defaultLabel);
+    head.appendChild(enabledLabel);
+    head.appendChild(up);
+    head.appendChild(down);
+    head.appendChild(remove);
+
+    const fields = document.createElement("div");
+    fields.className = "page-fields";
+    const titleLabel = document.createElement("label");
+    titleLabel.textContent = "标题";
+    const titleInput = document.createElement("input");
+    titleInput.className = "p-title";
+    titleInput.maxLength = 16;
+    titleInput.placeholder = "页面标题";
+    titleInput.value = (page && page.title) || "";
+    const shortLabel = document.createElement("label");
+    shortLabel.textContent = "短标题";
+    const shortInput = document.createElement("input");
+    shortInput.className = "p-short";
+    shortInput.maxLength = 8;
+    shortInput.placeholder = "LIVE";
+    shortInput.value = (page && page.shortTitle) || "";
+    fields.appendChild(titleLabel);
+    fields.appendChild(titleInput);
+    fields.appendChild(shortLabel);
+    fields.appendChild(shortInput);
+
+    const live = document.createElement("div");
+    live.className = "page-live";
+    live.hidden = typeSelect.value !== "live";
+    const liveHead = document.createElement("div");
+    liveHead.className = "row";
+    const metricLabel = document.createElement("span");
+    metricLabel.className = "hint";
+    metricLabel.textContent = "页面默认指标";
+    const metricSelect = makeSelect(PAGE_METRIC_OPTIONS, (page && page.metric) || "online", "p-metric");
+    liveHead.appendChild(metricLabel);
+    liveHead.appendChild(metricSelect);
+    live.appendChild(liveHead);
+
+    const sourceRooms = page && Array.isArray(page.rooms) ? page.rooms : [];
+    for (let slotIndex = 0; slotIndex < 2; slotIndex += 1) {
+      const room = sourceRooms[slotIndex] || {};
+      const slot = document.createElement("div");
+      slot.className = "room-slot";
+      const slotIndexLabel = document.createElement("span");
+      slotIndexLabel.className = "r-index";
+      slotIndexLabel.textContent = "房间" + (slotIndex + 1);
+      const platform = makeSelect(
+        PLATFORM_OPTIONS,
+        room.platform || (slotIndex === 0 ? "bilibili" : "douyin"),
+        "r-platform"
+      );
+      const roomInput = document.createElement("input");
+      roomInput.className = "r-room";
+      roomInput.placeholder = "房间号";
+      roomInput.value = room.room || "";
+      const labelInput = document.createElement("input");
+      labelInput.className = "r-label";
+      labelInput.placeholder = "标签";
+      labelInput.maxLength = 3;
+      labelInput.value = room.label || "";
+      const roomMetric = makeSelect(ROOM_METRIC_OPTIONS, room.metric || "", "r-metric");
+      const roomEnabledLabel = document.createElement("label");
+      roomEnabledLabel.className = "row";
+      const roomEnabled = document.createElement("input");
+      roomEnabled.type = "checkbox";
+      roomEnabled.className = "r-enabled";
+      roomEnabled.checked = !room || room.enabled !== false;
+      roomEnabledLabel.appendChild(roomEnabled);
+      roomEnabledLabel.appendChild(document.createTextNode(" 启用"));
+      slot.appendChild(slotIndexLabel);
+      slot.appendChild(platform);
+      slot.appendChild(roomInput);
+      slot.appendChild(labelInput);
+      slot.appendChild(roomMetric);
+      slot.appendChild(roomEnabledLabel);
+      live.appendChild(slot);
+    }
+
+    card.appendChild(head);
+    card.appendChild(fields);
+    card.appendChild(live);
+    list.appendChild(card);
+
+    typeSelect.addEventListener("change", () => {
+      live.hidden = typeSelect.value !== "live";
+      markPagesDirty();
+    });
+    [titleInput, shortInput, metricSelect, enabledBox].forEach((element) => {
+      element.addEventListener("input", markPagesDirty);
+      element.addEventListener("change", markPagesDirty);
+    });
+    defaultRadio.addEventListener("change", markPagesDirty);
+    live.querySelectorAll("input, select").forEach((element) => {
+      element.addEventListener("input", markPagesDirty);
+      element.addEventListener("change", markPagesDirty);
+    });
+    up.addEventListener("click", () => {
+      const previous = card.previousElementSibling;
+      if (!previous) return;
+      list.insertBefore(card, previous);
+      markPagesDirty();
+      renumberPages();
+    });
+    down.addEventListener("click", () => {
+      const next = card.nextElementSibling;
+      if (!next) return;
+      list.insertBefore(next, card);
+      markPagesDirty();
+      renumberPages();
+    });
+    remove.addEventListener("click", () => {
+      card.remove();
+      markPagesDirty();
+      renumberPages();
+      updatePageEmpty();
+      ensureDefaultPage();
+    });
+  }
+
+  function renumberPages() {
+    Array.from($("pageList").children).forEach((card, index) => {
+      const label = card.querySelector(".page-index");
+      if (label) label.textContent = String(index + 1);
+    });
+  }
+
+  function updatePageEmpty() {
+    $("pageEmpty").hidden = $("pageList").children.length > 0;
+  }
+
+  function ensureDefaultPage() {
+    const cards = Array.from($("pageList").children);
+    if (!cards.length) return;
+    if (!cards.some((card) => card.querySelector(".p-default").checked)) {
+      cards[0].querySelector(".p-default").checked = true;
+    }
+  }
+
+  function collectPages() {
+    const cards = Array.from($("pageList").children);
+    if (!cards.length) return { ok: false, error: "至少保留一个页面" };
+    const pages = [];
+    const ids = new Set();
+    for (const card of cards) {
+      const id = card.dataset.id;
+      if (!/^[a-z0-9_-]{1,8}$/.test(id) || ids.has(id)) {
+        return { ok: false, error: "页面 ID 无效或重复：" + id };
+      }
+      const type = card.querySelector(".p-type").value;
+      let title = card.querySelector(".p-title").value.trim();
+      let shortTitle = card.querySelector(".p-short").value.trim();
+      if (title.length > 16) title = title.slice(0, 16);
+      if (shortTitle.length > 8) shortTitle = shortTitle.slice(0, 8);
+      if (!/^[\x20-\x7E]*$/.test(shortTitle)) {
+        return { ok: false, error: "页面短标题只能使用 ASCII" };
+      }
+      const page = {
+        id: id,
+        type: type,
+        title: title || type,
+        shortTitle: shortTitle,
+        enabled: card.querySelector(".p-enabled").checked,
+      };
+      if (type === "live") {
+        page.metric = card.querySelector(".p-metric").value;
+        const rooms = [];
+        card.querySelectorAll(".room-slot").forEach((slot) => {
+          const room = slot.querySelector(".r-room").value.trim();
+          if (!/^[A-Za-z0-9_-]{0,40}$/.test(room)) {
+            throw new Error("房间号只能包含字母/数字/_/-（≤40）");
+          }
+          const label = slot.querySelector(".r-label").value.trim().toUpperCase()
+            .replace(/[^A-Z0-9._-]/g, "").slice(0, 3);
+          rooms.push({
+            platform: slot.querySelector(".r-platform").value,
+            room: room,
+            label: label,
+            metric: slot.querySelector(".r-metric").value,
+            enabled: slot.querySelector(".r-enabled").checked,
+          });
+        });
+        page.rooms = rooms;
+      }
+      ids.add(id);
+      pages.push(page);
+    }
+    const defaultCard = cards.find((card) => card.querySelector(".p-default").checked) || cards[0];
+    return { ok: true, pages: pages, defaultPageId: defaultCard.dataset.id };
+  }
+
+  async function savePages() {
+    let collected;
+    try {
+      collected = collectPages();
+    } catch (error) {
+      toast(errText(error), "err");
+      return;
+    }
+    if (!collected.ok) { toast(collected.error, "err"); return; }
+    await withBusy($("btnPagesSave"), "pages", async () => {
+      const result = await call("save_pages", collected.pages, collected.defaultPageId);
+      if (!result.ok) { toast(result.error || "保存页面失败", "err"); return; }
+      S.pagesDirty = false;
+      toast("已保存 " + result.count + " 个页面，默认页 " + result.defaultPageId, "ok");
+      await refreshDevice();
+      renderPages(true);
+    });
+  }
+
+  function normalizeColor(value, fallback) {
+    const full = /^#([0-9a-fA-F]{6})$/.exec(value || "");
+    if (full) return "#" + full[1].toLowerCase();
+    const short = /^#([0-9a-fA-F]{3})$/.exec(value || "");
+    if (short) {
+      const hex = short[1];
+      return "#" + hex[0] + hex[0] + hex[1] + hex[1] + hex[2] + hex[2];
+    }
+    return fallback;
+  }
+
+  function updateTzHint() {
+    const minutes = Number($("dispTz").value);
+    $("dispTzHint").textContent = Number.isFinite(minutes) ? formatTz(minutes) : "UTC—";
+  }
+
+  function markDisplayDirty() {
+    S.displayDirty = true;
+    updateTzHint();
+  }
+
+  function renderDisplay(force) {
+    if (S.displayDirty && !force) return;
+    if (!S.snapshot) { S.displayDirty = false; return; }
+    const config = S.snapshot.config || {};
+    const colors = config.colors || {};
+    const signature = JSON.stringify({
+      tz: config.tzOffsetMinutes !== undefined ? config.tzOffsetMinutes : 480,
+      warn: config.warnSeconds !== undefined ? config.warnSeconds : 10,
+      ntp: config.ntpServer || "",
+      colors: colors,
+    });
+    if (!force && S.displaySig === signature) return;
+    S.displaySig = signature;
+    $("dispTz").value = config.tzOffsetMinutes !== undefined ? config.tzOffsetMinutes : 480;
+    $("dispWarn").value = config.warnSeconds !== undefined ? config.warnSeconds : 10;
+    $("dispNtp").value = config.ntpServer || "";
+    $("colorClock").value = normalizeColor(colors.clock, "#ffffff");
+    $("colorCountdown").value = normalizeColor(colors.countdown, "#00ff00");
+    $("colorCountup").value = normalizeColor(colors.countup, "#00bfff");
+    $("colorWarning").value = normalizeColor(colors.warning, "#ff2020");
+    $("colorDim").value = normalizeColor(colors.dim, "#808080");
+    updateTzHint();
+    S.displayDirty = false;
+  }
+
+  async function saveDisplay() {
+    const tz = Number($("dispTz").value);
+    const warn = Number($("dispWarn").value);
+    if (!Number.isFinite(tz) || !Number.isFinite(warn)) {
+      toast("时区和预警秒数必须填数字", "err");
+      return;
+    }
+    const colors = {
+      clock: $("colorClock").value,
+      countdown: $("colorCountdown").value,
+      countup: $("colorCountup").value,
+      warning: $("colorWarning").value,
+      dim: $("colorDim").value,
+    };
+    await withBusy($("btnDisplaySave"), "display", async () => {
+      const result = await call("save_display", tz, warn, $("dispNtp").value.trim(), colors);
+      if (!result.ok) { toast(result.error || "保存显示设置失败", "err"); return; }
+      S.displayDirty = false;
+      toast("显示设置已保存", "ok");
+      await refreshDevice();
+      renderDisplay(true);
+    });
+  }
+
+  async function syncNetworkTime(button) {
+    await withBusy(button, "sync", async () => {
+      toast("正在获取网络时间…");
+      const result = await call("sync_network_time");
+      if (!result.ok) { toast(result.error || "同步网络时间失败", "err"); return; }
+      const when = result.localTime || String(result.epoch);
+      toast("网络时间已同步：" + when + "（" + result.source + "）", "ok");
+      setTimeout(refreshDevice, 500);
+    });
+  }
+
+  // ---------------------------------------------------------------- events
+  function bindEvents() {
+    document.querySelectorAll(".nav-btn").forEach((btn) => {
+      btn.addEventListener("click", () => showView(btn.dataset.view));
+    });
+
+    $("btnScan").addEventListener("click", scanDevices);
+    $("btnConnect").addEventListener("click", () => connectDevice(true));
+    $("scanResults").addEventListener("change", (event) => {
+      if (event.target.value) $("deviceHost").value = event.target.value;
+    });
+
+    $("btnPrev").addEventListener("click", async () => {
+      try {
+        const result = await call("switch_page", -1);
+        if (!result.ok) { toast(result.error || "切页失败", "err"); return; }
+        toast("已切到 " + (result.index + 1) + "/" + result.count, "ok");
+        setTimeout(refreshDevice, 500);
+      } catch (error) { toast(errText(error), "err"); }
+    });
+    $("btnNext").addEventListener("click", async () => {
+      try {
+        const result = await call("switch_page", 1);
+        if (!result.ok) { toast(result.error || "切页失败", "err"); return; }
+        toast("已切到 " + (result.index + 1) + "/" + result.count, "ok");
+        setTimeout(refreshDevice, 500);
+      } catch (error) { toast(errText(error), "err"); }
+    });
+    $("btnSyncTime").addEventListener("click", () => syncNetworkTime($("btnSyncTime")));
+    $("btnRefreshLive").addEventListener("click", async () => {
+      try {
+        const result = await call("refresh_live");
+        if (!result.ok) { toast(result.error || "刷新失败", "err"); return; }
+        toast("设备已排队刷新直播数据", "ok");
+      } catch (error) { toast(errText(error), "err"); }
+    });
+    $("btnPagesTab").addEventListener("click", () => showView("pages"));
+    $("btnHelp").addEventListener("click", () => showView("help"));
+
+    $("liveSource").addEventListener("change", () => { S.liveDirty = true; });
+    $("liveUrl").addEventListener("input", () => { S.liveDirty = true; });
+    $("liveRefresh").addEventListener("input", () => { S.liveDirty = true; });
+    $("liveTimeout").addEventListener("input", () => { S.liveDirty = true; });
+    $("btnUseBridge").addEventListener("click", useBridgeUrl);
+    $("btnSaveLive").addEventListener("click", saveLiveConfig);
+
+    $("btnAddWifi").addEventListener("click", addWifi);
+
+    $("btnAddTarget").addEventListener("click", () => {
+      addTargetRow(null);
+      S.targetsDirty = true;
+    });
+    $("btnTargetSave").addEventListener("click", saveTargets);
+    $("btnTargetReload").addEventListener("click", async () => {
+      S.targetsDirty = false;
+      await refreshDevice();
+      renderTargets(true);
+      toast("已从设备重新读取", "ok");
+    });
+
+    $("btnPageAdd").addEventListener("click", () => {
+      addPageCard(null, false);
+      markPagesDirty();
+      ensureDefaultPage();
+      updatePageEmpty();
+    });
+    $("btnPagesSave").addEventListener("click", savePages);
+    $("btnPageReload").addEventListener("click", async () => {
+      S.pagesDirty = false;
+      await refreshDevice();
+      renderPages(true);
+      toast("已从设备重新读取页面", "ok");
+    });
+    ["dispTz", "dispWarn", "dispNtp", "colorClock", "colorCountdown", "colorCountup", "colorWarning", "colorDim"].forEach((id) => {
+      $(id).addEventListener("input", markDisplayDirty);
+      $(id).addEventListener("change", markDisplayDirty);
+    });
+    $("btnDisplaySave").addEventListener("click", saveDisplay);
+    $("btnDisplayReload").addEventListener("click", async () => {
+      S.displayDirty = false;
+      await refreshDevice();
+      renderDisplay(true);
+      toast("已从设备重新读取显示设置", "ok");
+    });
+    $("btnSyncNetwork2").addEventListener("click", () => syncNetworkTime($("btnSyncNetwork2")));
+
+    $("btnForwardToggle").addEventListener("click", async () => {
+      const running = S.forward && S.forward.running;
+      const port = Number($("forwardPort").value || 8081);
+      await withBusy($("btnForwardToggle"), "forward", async () => {
+        const result = running ? await call("stop_forwarder") : await call("start_forwarder", port);
+        if (!result.ok) { toast(result.error || "操作失败", "err"); return; }
+        toast(running ? "转发已停止" : "转发已启动", "ok");
+        await refreshForward();
+      });
+    });
+    $("btnCopyUrl").addEventListener("click", () => copyText($("forwardUrl").value));
+    $("btnCopyConfig").addEventListener("click", () => {
+      const url = $("forwardUrl").value;
+      if (!url) { toast("请先启动转发", "err"); return; }
+      copyText('"live": {"source":"hybrid","url":"' + url + '","refreshSec":30,"timeoutMs":3000}');
+    });
+    $("btnClearLog").addEventListener("click", () => { $("logBox").textContent = ""; });
+  }
+
+  async function copyText(text) {
+    if (!text) { toast("没有可复制的内容", "err"); return; }
+    try {
+      await navigator.clipboard.writeText(text);
+      toast("已复制", "ok");
+      return;
+    } catch (error) { /* 回退到后端剪贴板 */ }
+    try {
+      const result = await call("copy_text", text);
+      toast(result.ok ? "已复制" : (result.error || "复制失败"), result.ok ? "ok" : "err");
+    } catch (error) { toast(errText(error), "err"); }
+  }
+})();
+</script>
+</body>
+</html>

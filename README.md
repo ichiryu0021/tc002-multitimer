@@ -82,8 +82,12 @@ v2 提供“正常时钟 + 带日期多目标倒计时”，v2.1 补齐多 WiFi 
 - **发布包 / 组件**：[`dist/`](dist/)（只含 `libzkgui.so`、`EasyUI.cfg`、`ui/main.ftu`；含官方 stock 的 `update.img` 需本地生成）
 - **最小可刷镜像**：[`dist-minimal/update.img`](dist-minimal/update.img)（无官方 stock 素材，GPL/公共 CA/OpenSSL）
 - **开发交接**：[`docs/HANDOFF-native.md`](docs/HANDOFF-native.md)
+- **AI / 二次开发入口**：[`AGENTS.md`](AGENTS.md)（组件地图、硬约束、构建测试、改动配方）
 - **主机单测**：[`tests/`](tests/)（211/211）
 - **直播中继**：[`tools/live-bridge/`](tools/live-bridge/)（Python）
+- **TC002 桌面助手**：[`tools/live-bridge/`](tools/live-bridge/)（Windows 单窗口 exe：
+  直播转发 + 设备发现/状态/切页/同步网络时间 + 直播参数下发 + WiFi 配网 +
+  倒计时目标 + 原生页面与显示配置；exe 见 Release）
 - **废弃方案存档**：[`legacy/awtrix-ng/`](legacy/awtrix-ng/)
 
 ## 功能

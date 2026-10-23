@@ -73,13 +73,16 @@ void renderDatetimePage(const TimerConfig& config, long long nowUtc,
 		drawTextCentered(surface, "--:--:--", 10, 1, 1, kColorTimeInvalid);
 		return;
 	}
-	// 时间大字放上半屏（scale2 占 0..9 行），日期小字放最底部（占 11..15 行）。
+	// 时间大字放上半屏（scale2 占 0..9 行），日期小字放最底部（scale1、baseline 16
+	// 占 11..15 行）。日期与时间行同宽同起点，字符间距均匀铺开。
 	int spacing = 2;
 	while (spacing > 0 && measureText(timeText, 2, spacing) > kScreenWidth) {
 		--spacing;
 	}
+	const int timeWidth = measureText(timeText, 2, spacing);
 	drawTextCentered(surface, timeText, 10, 2, spacing, config.colorClock);
-	drawTextCentered(surface, formatDate(local), 15, 1, 0, config.colorDim);
+	drawTextSpread(surface, formatDate(local), (kScreenWidth - timeWidth) / 2,
+			timeWidth, 16, 1, config.colorDim);
 }
 
 void renderSplitPage(const TimerConfig& config, long long nowUtc,
@@ -287,6 +290,38 @@ void drawTextCentered(Surface& surface, const std::string& text, int baseline,
 	const int width = measureText(text, scale, spacing);
 	drawText(surface, text, (kScreenWidth - width) / 2, baseline, scale,
 			spacing, rgb);
+}
+
+void drawTextSpread(Surface& surface, const std::string& text, int x, int width,
+		int baseline, int scale, uint32_t rgb) {
+	if (scale < 1) {
+		scale = 1;
+	}
+	const int count = static_cast<int>(text.size());
+	if (count <= 0) {
+		return;
+	}
+	int textWidth = 0;
+	for (int i = 0; i < count; ++i) {
+		textWidth += charAdvance(text[i], scale);
+	}
+	if (count == 1 || width <= textWidth) {
+		drawText(surface, text, x, baseline, scale, 0, rgb);
+		return;
+	}
+	const int gaps = count - 1;
+	const int extra = width - textWidth;
+	const int baseGap = extra / gaps;
+	const int remainder = extra % gaps;
+	int cursorX = x;
+	for (int i = 0; i < count; ++i) {
+		drawText(surface, std::string(1, text[i]), cursorX, baseline, scale, 0,
+				rgb);
+		if (i < gaps) {
+			cursorX += charAdvance(text[i], scale) + baseGap +
+					(i < remainder ? 1 : 0);
+		}
+	}
 }
 
 void drawScaledText(Surface& surface, const std::string& text, int scale,

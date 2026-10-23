@@ -17,5 +17,10 @@ legacy/awtrix-ng/.venv_lib/
 __pycache__/
 *.pyc
 
+# live-bridge GUI 打包产物（本地生成，不纳入源码）
+tools/live-bridge/dist/
+tools/live-bridge/build/
+tools/live-bridge/*.spec
+
 # 本机配置/敏感备份（build/ 已整体忽略）
 config.json

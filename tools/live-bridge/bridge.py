@@ -628,15 +628,24 @@ class KuaishouBrowser:
         page = None
         try:
             pw = sync_playwright().start()
-            browser = pw.chromium.launch(
-                headless=True,
-                args=[
-                    "--disable-gpu",
-                    "--no-sandbox",
-                    "--disable-dev-shm-usage",
-                    "--mute-audio",
-                ],
-            )
+            launch_args = [
+                "--disable-gpu",
+                "--no-sandbox",
+                "--disable-dev-shm-usage",
+                "--mute-audio",
+            ]
+            try:
+                # 优先用系统 Edge：打包版不必再下载 150 MB Chromium
+                browser = pw.chromium.launch(
+                    headless=True, channel="msedge", args=launch_args
+                )
+                LOG.info("kuaishou: using system Microsoft Edge")
+            except Exception as edge_exc:
+                LOG.info(
+                    "kuaishou: system Edge unavailable (%s), falling back to bundled Chromium",
+                    type(edge_exc).__name__,
+                )
+                browser = pw.chromium.launch(headless=True, args=launch_args)
             context = browser.new_context(
                 user_agent=UA_DESKTOP,
                 locale="zh-CN",

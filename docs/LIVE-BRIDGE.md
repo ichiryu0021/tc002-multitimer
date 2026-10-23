@@ -113,6 +113,40 @@ Connection: close
 
 ## 2. 快速开始（Windows）
 
+**双击即用（推荐，无需 Python）**：运行 `tools/live-bridge/dist/TC002Desk.exe`。
+这是一个单窗口 TC002 桌面助手，包含五个页签：
+
+| 页签 | 能力 |
+|---|---|
+| 设备概览 | 搜索/连接设备（:8080）、状态总览、切页、同步网络时间、直播参数一键下发、WiFi 配网 |
+| 直播转发 | 启停转发、显示局域网 `live.url`、复制配置示例、缓存/平台状态、运行日志 |
+| 倒计时目标 | 原生读取/添加/删除/启用目标（日期 + 时间），保存写回设备 |
+| 页面与显示 | 原生编辑 1–12 页（类型/标题/短标题/启用/默认页/排序；直播页 1–2 房间与指标），时区、预警秒数、NTP 服务器、配色 |
+| 使用说明 | 第一步流程、各平台房间号取法、快手/Edge 说明、常见问题、安全说明 |
+
+直播配置一键下发会先 `GET /api/config`，只改 `live.source/url/refreshSec/timeoutMs`
+后整份写回，不会覆盖页面/目标/WiFi；随后触发 `POST /api/live/refresh`。
+倒计时目标保存同样先读完整配置，只替换 `targets[]`（≤12 项）。
+页面与显示保存走同一模式：先 `GET /api/config`，只替换 `pages[]` + `defaultPageId`
+（或 `tzOffsetMinutes`/`warnSeconds`/`ntpServer`/`colors`），再整份写回，不动其他字段。
+UI 由 pywebview + 系统 WebView2 渲染本地 HTML，不加载设备自带网页。
+“同步网络时间”由 PC 用 NTP（UDP 123，默认优先中国科学院国家授时中心
+`ntp.ntsc.ac.cn`，再依次回退其他公共服务器）取 UTC，
+DNS/网络受限时回退 HTTP `Date` 响应头，再 `POST /api/time` 写入设备，不依赖电脑本地时钟。
+
+```powershell
+# 源码运行（需要 Python + requirements-gui.txt）
+cd D:\Project\ulanzi\tools\live-bridge
+python forwarder_gui.py
+
+# 重新打包
+powershell -ExecutionPolicy Bypass -File build_gui.ps1
+```
+
+> exe 已内置 Playwright；快手优先调用系统 Microsoft Edge（无需下载 Chromium），
+> 没有 Edge 时回退到本机 Chromium。设备端 live.source 建议 `hybrid`（B 站直连）
+> 或 `bridge`（三平台都走转发）。
+
 ### 2.1 安装与启动
 
 ```powershell

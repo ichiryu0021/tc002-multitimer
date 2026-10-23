@@ -4048,7 +4048,7 @@ function evaluateStage(nowEpoch, config) {
   };
 }
 
-function frameRun(text, color, scale, baseline, boxX, boxWidth) {
+function frameRun(text, color, scale, baseline, boxX, boxWidth, justify) {
   return {
     text: String(text === null || text === undefined ? "" : text),
     color: color,
@@ -4056,7 +4056,8 @@ function frameRun(text, color, scale, baseline, boxX, boxWidth) {
     baseline: baseline,
     boxX: boxX,
     boxWidth: boxWidth,
-    align: "center"
+    align: "center",
+    justify: justify === true
   };
 }
 
@@ -4108,8 +4109,11 @@ function buildPageFrame(nowEpoch, page, config, options) {
       frame.summary = "--:--:--";
       return frame;
     }
+    var timeFit = fitTextToBox(local.time, 2, 2, COLS);
+    var timeWidth = measurePixelText(timeFit.text, 2, timeFit.spacing);
+    var dateX = Math.floor((COLS - timeWidth) / 2);
     frame.runs.push(frameRun(local.time, config.colors.clock, 2, 10, 0, COLS));
-    frame.runs.push(frameRun(local.date, config.colors.dim, 1, 15, 0, COLS));
+    frame.runs.push(frameRun(local.date, config.colors.dim, 1, 16, dateX, timeWidth, true));
     frame.text = local.time;
     frame.color = config.colors.clock;
     frame.mode = "datetime";
@@ -4386,8 +4390,28 @@ function drawTextPixels(pixels, text, x, baseline, scale, spacing, color) {
   }
 }
 
+/* 与固件一致：整行宽度铺满 boxWidth，字符间距基础值取整，余数补给最前面的间隙。 */
+function drawJustifiedRunPixels(pixels, run) {
+  var s = String(run.text);
+  var natural = measurePixelText(s, run.scale, 0);
+  var extra = run.boxWidth - natural;
+  var gaps = s.length - 1;
+  var base = gaps > 0 ? Math.floor(extra / gaps) : 0;
+  var remainder = gaps > 0 ? extra - base * gaps : 0;
+  var cursorX = run.boxX;
+  for (var i = 0; i < s.length; i++) {
+    drawTextPixels(pixels, s[i], cursorX, run.baseline, run.scale, 0, run.color);
+    cursorX += charAdvancePixel(s[i], run.scale);
+    if (i < gaps) cursorX += base + (i < remainder ? 1 : 0);
+  }
+}
+
 function drawRunPixels(pixels, run) {
   if (!run || !run.text) return;
+  if (run.justify) {
+    drawJustifiedRunPixels(pixels, run);
+    return;
+  }
   var fit = fitTextToBox(run.text, run.scale, run.scale, run.boxWidth);
   var width = measurePixelText(fit.text, run.scale, fit.spacing);
   var x = run.align === "left" ? run.boxX : run.boxX + Math.floor((run.boxWidth - width) / 2);

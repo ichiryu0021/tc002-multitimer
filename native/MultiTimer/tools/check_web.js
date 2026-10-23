@@ -1018,6 +1018,42 @@ async function main() {
     assertEqual(frame.mode, "invalid", "模式应为 invalid");
   });
 
+  check("15b. datetime 日期行与时间等宽同起点：scale1 / baseline16 / justify / 像素 2..48", function () {
+    const api = requireApi(sbA);
+    const config = api.getDraft();
+    const page = { id: "dt", type: "datetime", title: "日期时间", shortTitle: "DT", enabled: true };
+    const epoch = api.dateTimeToEpoch("2026-10-22", "11:00:00", 480);
+    const frame = api.buildPageFrame(epoch, page, config, { timeValid: true });
+    assertEqual(frame.pageType, "datetime", "应为 datetime 页");
+    assertEqual(frame.runs.length, 2, "有效时间应有时间/日期两条 run");
+    const dateRun = frame.runs[1];
+    assertEqual(dateRun.text, "2026-10-22", "日期文本不符");
+    assertEqual(dateRun.scale, 1, "日期 scale 应为 1");
+    assertEqual(dateRun.baseline, 16, "日期 baseline 应为 16");
+    assertEqual(dateRun.boxWidth, 47, "日期 boxWidth 应为 47");
+    assertEqual(dateRun.boxX, 2, "日期 boxX 应为 2");
+    assertEqual(dateRun.justify, true, "日期 run 应两端对齐");
+    assert(!frame.runs[0].justify, "时间 run 不应两端对齐");
+    const timeFit = api.fitTextToBox(frame.runs[0].text, 2, 2, 52);
+    const timeWidth = api.measurePixelText(timeFit.text, 2, timeFit.spacing);
+    assertEqual(timeWidth, 47, "时间渲染宽度应为 47");
+    assertEqual(dateRun.boxWidth, timeWidth, "日期宽度应与时间渲染宽度相等");
+    const pixels = api.framePixels({ runs: [dateRun], cells: [] });
+    let minX = 52;
+    let maxX = -1;
+    for (let i = 0; i < pixels.length; i++) {
+      if (pixels[i] === undefined) continue;
+      const x = i % 52;
+      if (x < minX) minX = x;
+      if (x > maxX) maxX = x;
+    }
+    assertEqual(minX, 2, "日期首字符应从 x=2 开始");
+    assertEqual(maxX, 48, "日期末字符应到达 x=48");
+    const invalid = api.buildPageFrame(epoch, page, config, { timeValid: false });
+    assertEqual(invalid.runs.length, 1, "无效时间应只有占位 run");
+    assertEqual(invalid.runs[0].text, "--:--:--", "无效时间占位不符");
+  });
+
   /* ------------------------------ 帧模型：分屏 / 倒计时 / 直播 ------------------------------ */
   const fixedTargets = [{ date: "2026-10-23", time: "12:00:00", enabled: true }];
   const sbFrames = newSandbox({

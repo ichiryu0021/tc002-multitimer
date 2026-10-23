@@ -51,6 +51,12 @@ void drawText(Surface& surface, const std::string& text, int x, int baseline,
 void drawTextCentered(Surface& surface, const std::string& text, int baseline,
 		int scale, int spacing, uint32_t rgb);
 
+// 在 [x, x+width) 内按字形可见宽度把文本均匀铺开：字符间距取整，余数像素
+// 依次补给最前面的间隙；scale/baseline 不变。空文本/单字符/放不下时退化为
+// drawText(spacing=0) 左对齐。
+void drawTextSpread(Surface& surface, const std::string& text, int x, int width,
+		int baseline, int scale, uint32_t rgb);
+
 // v2 drawScaledText 语义：全屏居中；超宽时先收紧 spacing，仍超宽按 52 截断。
 // 基线 = (16 - 5*scale)/2 + 5*scale（scale=2 时基线 13、占 3..12 行）。
 void drawScaledText(Surface& surface, const std::string& text, int scale,
